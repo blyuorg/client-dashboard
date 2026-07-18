@@ -1,4 +1,4 @@
--- ============================================================
+11-- ============================================================
 -- BLYU CLIENT PORTAL — FULL POSTGRES SCHEMA (Supabase)
 -- ============================================================
 -- Run in Supabase SQL editor, top to bottom.
@@ -533,6 +533,50 @@ create trigger on_auth_user_created
 alter table public.projects add column if not exists budget numeric(12,2);
 
 alter type task_status add value if not exists 'blocked';
+
+-- ============================================================
+-- 20. PROJECT APPROVALS
+-- ============================================================
+-- Client-facing sign-off items (e.g. "Approve the wireframes"). Admin
+-- creates the pending item; the client approves or requests changes from
+-- the Project page drawer. Distinct from milestones (which track phases,
+-- not approval decisions).
+create type approval_status as enum ('pending', 'approved', 'changes_requested');
+
+create table public.project_approvals (
+  id uuid primary key default uuid_generate_v4(),
+  project_id uuid not null references public.projects(id) on delete cascade,
+  title text not null,
+  description text,
+  status approval_status not null default 'pending',
+  note text, -- client's comment when approving / requesting changes
+  decided_by uuid references public.profiles(id),
+  decided_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index on public.project_approvals (project_id);
+create index on public.project_approvals (status);
+
+alter table public.project_approvals enable row level security;
+
+create policy "approvals_select_own_or_admin" on public.project_approvals
+  for select using (
+    public.is_admin() or
+    exists (select 1 from public.projects p where p.id = project_id and p.client_id = auth.uid())
+  );
+
+create policy "approvals_client_decide_or_admin" on public.project_approvals
+  for update using (
+    public.is_admin() or
+    exists (select 1 from public.projects p where p.id = project_id and p.client_id = auth.uid())
+  );
+
+create policy "approvals_admin_insert" on public.project_approvals
+  for insert with check (public.is_admin());
+
+create policy "approvals_admin_delete" on public.project_approvals
+  for delete using (public.is_admin());
 
 -- ============================================================
 -- END OF SCHEMA

@@ -16,6 +16,8 @@ export type MilestoneStatus = "pending" | "in_progress" | "completed";
 export type InvoiceStatus = "draft" | "pending" | "paid" | "overdue" | "cancelled";
 export type PaymentMethod = "bank_transfer" | "card" | "upi" | "cash" | "other";
 export type PaymentStatus = "pending" | "success" | "failed" | "refunded";
+export type ApprovalStatus = "pending" | "approved" | "changes_requested";
+export type DocumentFolder = "contracts" | "invoices" | "design_files" | "requirements" | "reports" | "others";
 
 export type Profile = {
   id: string;
@@ -123,6 +125,53 @@ export type Activity = {
   created_at: string;
 };
 
+export type ProjectApproval = {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string | null;
+  status: ApprovalStatus;
+  note: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  created_at: string;
+};
+
+export type Document = {
+  id: string;
+  project_id: string | null;
+  uploaded_by: string;
+  folder: DocumentFolder;
+  file_name: string;
+  storage_path: string;
+  file_size: number | null;
+  mime_type: string | null;
+  created_at: string;
+};
+
+export type Message = {
+  id: string;
+  project_id: string | null;
+  sender_id: string;
+  recipient_id: string | null;
+  body: string;
+  attachment_path: string | null;
+  is_read: boolean;
+  created_at: string;
+};
+
+export type Meeting = {
+  id: string;
+  project_id: string | null;
+  client_id: string | null;
+  title: string;
+  scheduled_at: string;
+  duration_minutes: number | null;
+  meeting_link: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
 export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "12";
@@ -169,6 +218,30 @@ export type Database = {
         Row: Activity;
         Insert: Partial<Activity>;
         Update: Partial<Activity>;
+        Relationships: [];
+      };
+      project_approvals: {
+        Row: ProjectApproval;
+        Insert: Partial<ProjectApproval>;
+        Update: Partial<ProjectApproval>;
+        Relationships: [];
+      };
+      documents: {
+        Row: Document;
+        Insert: Partial<Document>;
+        Update: Partial<Document>;
+        Relationships: [];
+      };
+      messages: {
+        Row: Message;
+        Insert: Partial<Message>;
+        Update: Partial<Message>;
+        Relationships: [];
+      };
+      meetings: {
+        Row: Meeting;
+        Insert: Partial<Meeting>;
+        Update: Partial<Meeting>;
         Relationships: [];
       };
     };
