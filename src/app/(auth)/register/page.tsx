@@ -9,12 +9,13 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
+import { signUp } from "@/lib/supabase/auth";
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [confirmationSent, setConfirmationSent] = useState(false);
   const {
     register,
     handleSubmit,
@@ -23,29 +24,49 @@ export default function RegisterPage() {
 
   async function onSubmit(values: RegisterInput) {
     setServerError(null);
-    const supabase = createClient();
-    const { data, error } = await supabase.auth.signUp({
-      email: values.email,
-      password: values.password,
-      options: { data: { full_name: values.fullName } },
+    // The public.profiles row is created server-side by the handle_new_user
+    // trigger (supabase/schema.sql), not here. Inserting it client-side would
+    // race against email confirmation: until the user confirms, signUp()
+    // returns no session, so auth.uid() is NULL and RLS rejects the insert.
+    const { data, error } = await signUp(values.email, values.password, {
+      full_name: values.fullName,
     });
 
     if (error) {
-      setServerError(error.message);
+      setServerError(error);
       return;
     }
 
-    if (data.user) {
-      // Create the profile row — role defaults to 'client' in the DB.
-      await supabase.from("profiles").insert({
-        id: data.user.id,
-        email: values.email,
-        full_name: values.fullName,
-      });
+    if (!data?.session) {
+      // Email confirmation is required — there's no session to redirect with.
+      setConfirmationSent(true);
+      return;
     }
 
     router.push("/dashboard");
     router.refresh();
+  }
+
+  if (confirmationSent) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Check your inbox</CardTitle>
+          <CardDescription>Confirm your email to finish creating your account</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            We&apos;ve sent a confirmation link to your email address. Click it to activate your
+            account, then log in.
+          </p>
+        </CardContent>
+        <CardFooter>
+          <Link href="/login" className="text-sm text-muted-foreground hover:underline">
+            Back to login
+          </Link>
+        </CardFooter>
+      </Card>
+    );
   }
 
   return (

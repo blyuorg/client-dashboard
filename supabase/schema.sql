@@ -73,6 +73,7 @@ create table public.projects (
   requirements text,
   project_notes text,
   is_archived boolean not null default false,
+  budget numeric(12,2), -- contract value, set by admin; drives KPI + billing charts
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -482,7 +483,36 @@ create policy "tickets_update_own_or_admin" on public.support_tickets
   for update using (client_id = auth.uid() or public.is_admin());
 
 -- ============================================================
--- 17. STORAGE BUCKETS (run separately if using Supabase Storage SQL API)
+-- 17. PROFILE AUTO-CREATION TRIGGER
+-- ============================================================
+-- Creates the public.profiles row automatically whenever a new row is
+-- inserted into auth.users, instead of relying on a client-side insert
+-- after signUp(). This matters because when email confirmation is
+-- enabled (Authentication > Providers > Email), supabase.auth.signUp()
+-- returns a user but NO session until the user clicks the confirmation
+-- link — so a client-side insert runs with auth.uid() = NULL and is
+-- correctly rejected by the profiles_insert_own RLS policy below
+-- ("permission denied", 42501). SECURITY DEFINER lets this trigger
+-- bypass RLS for this one controlled, server-side operation, and it
+-- runs in the same transaction as the auth.users insert, so there's no
+-- race regardless of confirmation settings.
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, email, full_name)
+  values (new.id, new.email, new.raw_user_meta_data->>'full_name')
+  on conflict (id) do nothing;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- ============================================================
+-- 18. STORAGE BUCKETS (run separately if using Supabase Storage SQL API)
 -- ============================================================
 -- insert into storage.buckets (id, name, public) values ('documents', 'documents', false);
 -- insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true);
@@ -490,6 +520,19 @@ create policy "tickets_update_own_or_admin" on public.support_tickets
 --
 -- Storage RLS policies should mirror the documents/invoices table policies above,
 -- scoped by folder path convention: {project_id}/{filename}
+
+-- ============================================================
+-- 19. MIGRATION: existing databases only
+-- ============================================================
+-- If public.projects / task_status already exist from an earlier run of
+-- this schema, the CREATE TABLE / CREATE TYPE statements above were
+-- skipped by Postgres — apply these two statements directly instead.
+-- Run the ALTER TYPE statement on its own (Postgres can't use a new enum
+-- value in the same transaction that adds it).
+
+alter table public.projects add column if not exists budget numeric(12,2);
+
+alter type task_status add value if not exists 'blocked';
 
 -- ============================================================
 -- END OF SCHEMA

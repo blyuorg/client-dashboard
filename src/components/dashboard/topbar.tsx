@@ -4,14 +4,13 @@ import { useRouter } from "next/navigation";
 import { Bell, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { createClient } from "@/lib/supabase/client";
+import { signOut } from "@/lib/supabase/auth";
 
 export function Topbar({ userName }: { userName?: string | null }) {
   const router = useRouter();
 
   async function handleLogout() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    await signOut();
     router.push("/login");
     router.refresh();
   }

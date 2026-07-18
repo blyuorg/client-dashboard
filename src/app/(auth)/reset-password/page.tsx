@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
+import { updatePassword } from "@/lib/supabase/auth";
 import { resetPasswordSchema, type ResetPasswordInput } from "@/lib/validations/auth";
 
 export default function ResetPasswordPage() {
@@ -22,11 +22,10 @@ export default function ResetPasswordPage() {
 
   async function onSubmit(values: ResetPasswordInput) {
     setServerError(null);
-    const supabase = createClient();
-    const { error } = await supabase.auth.updateUser({ password: values.password });
+    const { error } = await updatePassword(values.password);
 
     if (error) {
-      setServerError(error.message);
+      setServerError(error);
       return;
     }
     router.push("/login");

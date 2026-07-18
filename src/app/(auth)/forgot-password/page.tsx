@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
+import { sendPasswordResetEmail } from "@/lib/supabase/auth";
 import { forgotPasswordSchema, type ForgotPasswordInput } from "@/lib/validations/auth";
 
 export default function ForgotPasswordPage() {
@@ -22,13 +22,13 @@ export default function ForgotPasswordPage() {
 
   async function onSubmit(values: ForgotPasswordInput) {
     setServerError(null);
-    const supabase = createClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+    const { error } = await sendPasswordResetEmail(
+      values.email,
+      `${window.location.origin}/reset-password`
+    );
 
     if (error) {
-      setServerError(error.message);
+      setServerError(error);
       return;
     }
     setSent(true);

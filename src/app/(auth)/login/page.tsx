@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
+import { signIn } from "@/lib/supabase/auth";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 
 export default function LoginPage() {
@@ -23,14 +23,10 @@ export default function LoginPage() {
 
   async function onSubmit(values: LoginInput) {
     setServerError(null);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
-      email: values.email,
-      password: values.password,
-    });
+    const { error } = await signIn(values.email, values.password);
 
     if (error) {
-      setServerError(error.message);
+      setServerError(error);
       return;
     }
 
