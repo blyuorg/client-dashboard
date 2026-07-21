@@ -1,17 +1,14 @@
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { ProfileCard } from "@/components/profile/profile-card";
 
 export default function ProfilePage() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Profile</CardTitle>
-        <CardDescription>This page is scaffolded and ready to build out.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-muted-foreground">
-          Wire this up to the `profile` table via the Supabase server client.
-        </p>
-      </CardContent>
-    </Card>
+    <div className="mx-auto max-w-2xl space-y-6">
+      <div>
+        <h1 className="font-display text-3xl">My Profile</h1>
+        <p className="text-sm text-muted-foreground">View your account information and contact details.</p>
+      </div>
+
+      <ProfileCard />
+    </div>
   );
 }
