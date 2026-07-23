@@ -13,6 +13,23 @@ export async function signIn(email: string, password: string): Promise<AuthResul
   return { data: data.session, error: null };
 }
 
+/**
+ * Kicks off the Google OAuth redirect flow. On success the browser navigates
+ * away to Google immediately, so there is no session to return here — the
+ * session is established when Google redirects back to /auth/callback.
+ */
+export async function signInWithGoogle(): Promise<{ error: string | null }> {
+  const supabase = createClient();
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`,
+    },
+  });
+  if (error) return { error: getReadableErrorMessage(error) };
+  return { error: null };
+}
+
 export type SignUpData = { user: User | null; session: Session | null };
 
 /**

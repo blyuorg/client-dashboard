@@ -1,20 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { signIn } from "@/lib/supabase/auth";
+import { Separator } from "@/components/ui/separator";
+import { GoogleIcon } from "@/components/icons/google-icon";
+import { signIn, signInWithGoogle } from "@/lib/supabase/auth";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
-  const [serverError, setServerError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const [serverError, setServerError] = useState<string | null>(
+    searchParams.get("error") === "oauth_failed" ? "Google sign-in failed. Please try again." : null
+  );
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const {
     register,
     handleSubmit,
@@ -34,12 +40,43 @@ export default function LoginPage() {
     router.refresh();
   }
 
+  async function handleGoogleSignIn() {
+    setServerError(null);
+    setIsGoogleLoading(true);
+
+    const { error } = await signInWithGoogle();
+
+    // On success the browser is already navigating to Google, so there's
+    // nothing left to do here — only an error leaves us on this page.
+    if (error) {
+      setServerError(error);
+      setIsGoogleLoading(false);
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Welcome back</CardTitle>
         <CardDescription>Log in to your Blyu client portal</CardDescription>
       </CardHeader>
+      <CardContent className="space-y-4">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          disabled={isGoogleLoading || isSubmitting}
+          onClick={handleGoogleSignIn}
+        >
+          <GoogleIcon className="mr-2 h-4 w-4" />
+          {isGoogleLoading ? "Redirecting…" : "Continue with Google"}
+        </Button>
+        <div className="flex items-center gap-3">
+          <Separator className="shrink" />
+          <span className="text-xs text-muted-foreground">OR</span>
+          <Separator className="shrink" />
+        </div>
+      </CardContent>
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -60,7 +97,7 @@ export default function LoginPage() {
           {serverError && <p className="text-sm text-destructive">{serverError}</p>}
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button type="submit" className="w-full" disabled={isSubmitting || isGoogleLoading}>
             {isSubmitting ? "Logging in…" : "Log in"}
           </Button>
           <p className="text-sm text-muted-foreground">
@@ -72,5 +109,13 @@ export default function LoginPage() {
         </CardFooter>
       </form>
     </Card>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
