@@ -1,38 +1,51 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { GoogleIcon } from "@/components/icons/google-icon";
+import { Mail, Lock, Loader2, ShieldCheck } from "lucide-react";
+import { AuthCard, AuthCardHeader } from "@/components/auth/auth-card";
+import { FloatingInput } from "@/components/auth/floating-input";
+import { SocialAuthButtons } from "@/components/auth/social-auth-buttons";
+import { ForgotPasswordModal } from "@/components/auth/forgot-password-modal";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RippleLayer } from "@/components/auth/ripple-layer";
+import { useRipple } from "@/hooks/use-ripple";
 import { signIn, signInWithGoogle } from "@/lib/supabase/auth";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
+import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [serverError, setServerError] = useState<string | null>(
-    searchParams.get("error") === "oauth_failed" ? "Google sign-in failed. Please try again." : null
-  );
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const signInRipple = useRipple();
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginInput>({ resolver: zodResolver(loginSchema) });
 
+  useEffect(() => {
+    if (searchParams.get("error") === "oauth_failed") {
+      toast({
+        variant: "destructive",
+        title: "Google sign-in failed",
+        description: "Please try again or use your email and password.",
+      });
+    }
+  }, [searchParams]);
+
   async function onSubmit(values: LoginInput) {
-    setServerError(null);
     const { error } = await signIn(values.email, values.password);
 
     if (error) {
-      setServerError(error);
+      toast({ variant: "destructive", title: "Sign in failed", description: error });
       return;
     }
 
@@ -41,74 +54,99 @@ function LoginForm() {
   }
 
   async function handleGoogleSignIn() {
-    setServerError(null);
     setIsGoogleLoading(true);
-
     const { error } = await signInWithGoogle();
 
     // On success the browser is already navigating to Google, so there's
     // nothing left to do here — only an error leaves us on this page.
     if (error) {
-      setServerError(error);
+      toast({ variant: "destructive", title: "Google sign-in failed", description: error });
       setIsGoogleLoading(false);
     }
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Welcome back</CardTitle>
-        <CardDescription>Log in to your Blyu client portal</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          disabled={isGoogleLoading || isSubmitting}
-          onClick={handleGoogleSignIn}
-        >
-          <GoogleIcon className="mr-2 h-4 w-4" />
-          {isGoogleLoading ? "Redirecting…" : "Continue with Google"}
-        </Button>
-        <div className="flex items-center gap-3">
-          <Separator className="shrink" />
-          <span className="text-xs text-muted-foreground">OR</span>
-          <Separator className="shrink" />
+    <AuthCard>
+      <AuthCardHeader title="Welcome Back" subtitle="Sign in to continue to your dashboard." />
+
+      <SocialAuthButtons
+        mode="signin"
+        googleLoading={isGoogleLoading}
+        onGoogleClick={handleGoogleSignIn}
+        disabled={isSubmitting}
+      />
+
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-auth-border" />
+        <span className="text-xs font-medium tracking-wide text-auth-muted">OR CONTINUE WITH</span>
+        <div className="h-px flex-1 bg-auth-border" />
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        <FloatingInput
+          id="email"
+          label="Email Address"
+          icon={Mail}
+          type="email"
+          autoComplete="email"
+          error={errors.email?.message}
+          {...register("email")}
+        />
+        <FloatingInput
+          id="password"
+          label="Password"
+          icon={Lock}
+          type="password"
+          autoComplete="current-password"
+          error={errors.password?.message}
+          {...register("password")}
+        />
+
+        <div className="flex items-center justify-between">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-auth-text">
+            <Checkbox checked={rememberMe} onCheckedChange={setRememberMe} aria-label="Remember me" />
+            Remember me
+          </label>
+          <button
+            type="button"
+            onClick={() => setForgotOpen(true)}
+            className="text-sm font-medium text-auth-primary hover:underline"
+          >
+            Forgot password?
+          </button>
         </div>
-      </CardContent>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="you@company.com" {...register("email")} />
-            {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
-              <Link href="/forgot-password" className="text-xs text-muted-foreground hover:underline">
-                Forgot password?
-              </Link>
-            </div>
-            <Input id="password" type="password" {...register("password")} />
-            {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
-          </div>
-          {serverError && <p className="text-sm text-destructive">{serverError}</p>}
-        </CardContent>
-        <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={isSubmitting || isGoogleLoading}>
-            {isSubmitting ? "Logging in…" : "Log in"}
-          </Button>
-          <p className="text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-foreground underline underline-offset-4">
-              Create one
-            </Link>
-          </p>
-        </CardFooter>
+
+        <button
+          type="submit"
+          onMouseDown={signInRipple.addRipple}
+          disabled={isSubmitting || isGoogleLoading}
+          className={cn(
+            "relative flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-auth-primary text-sm font-medium text-white transition-all",
+            "hover:bg-auth-primary-hover active:scale-[0.99]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-auth-primary focus-visible:ring-offset-2",
+            "disabled:cursor-not-allowed disabled:opacity-60"
+          )}
+        >
+          <RippleLayer ripples={signInRipple.ripples} />
+          {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+          {isSubmitting ? "Signing in…" : "Sign In"}
+        </button>
+
+        <p className="flex items-center justify-center gap-1.5 text-xs text-auth-muted">
+          <ShieldCheck className="h-3.5 w-3.5" />
+          Protected with enterprise-grade encryption.
+        </p>
       </form>
-    </Card>
+
+      <p className="mt-6 text-center text-sm text-auth-muted">
+        Don&apos;t have an account?{" "}
+        <Link href="/register" className="font-medium text-auth-primary hover:underline">
+          Create Account
+        </Link>
+      </p>
+
+      <ForgotPasswordModal open={forgotOpen} onOpenChange={setForgotOpen} />
+    </AuthCard>
   );
 }
 
