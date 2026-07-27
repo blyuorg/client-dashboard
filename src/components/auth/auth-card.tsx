@@ -11,7 +11,7 @@ export function AuthCard({ children, className }: { children: React.ReactNode; c
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: "easeOut" }}
       className={cn(
-        "w-full max-w-[460px] rounded-auth border border-auth-border bg-white p-8 shadow-[0_8px_30px_rgb(15,23,42,0.06)] transition-shadow duration-300 hover:shadow-[0_12px_40px_rgb(15,23,42,0.09)] sm:p-10",
+        "w-full max-w-[460px] rounded-auth border border-auth-border bg-auth-card p-8 shadow-[0_8px_40px_rgba(0,0,0,0.5)] backdrop-blur-2xl transition-shadow duration-300 hover:shadow-[0_12px_50px_rgba(0,0,0,0.6)] sm:p-10",
         className
       )}
     >

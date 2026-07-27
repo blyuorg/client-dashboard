@@ -29,9 +29,9 @@ export function SocialAuthButtons({
         disabled={googleLoading || disabled}
         aria-label={googleLoading ? "Signing in with Google…" : copy}
         className={cn(
-          "relative flex h-11 w-full items-center justify-center gap-2.5 overflow-hidden rounded-xl border border-auth-border bg-white text-sm font-medium text-auth-text",
-          "transition-all duration-200 hover:border-auth-muted/60 hover:shadow-md active:scale-[0.99]",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-auth-primary focus-visible:ring-offset-2",
+          "relative flex h-12 w-full items-center justify-center gap-2.5 overflow-hidden rounded-xl border border-auth-border bg-auth-card text-sm font-medium text-auth-text",
+          "transition-all duration-200 hover:border-white/20 hover:bg-auth-cardHover hover:shadow-lg active:scale-[0.99]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-auth-primary focus-visible:ring-offset-2 focus-visible:ring-offset-auth-bg",
           "disabled:cursor-not-allowed disabled:opacity-60"
         )}
       >
@@ -57,7 +57,7 @@ export function SocialAuthButtons({
         disabled
         aria-label="GitHub sign-in coming soon"
         title="Coming soon"
-        className="flex h-11 w-full cursor-not-allowed items-center justify-center gap-2.5 rounded-xl border border-auth-border bg-white text-sm font-medium text-auth-muted opacity-60"
+        className="flex h-12 w-full cursor-not-allowed items-center justify-center gap-2.5 rounded-xl border border-auth-border bg-auth-card text-sm font-medium text-auth-muted opacity-60"
       >
         <GitHubIcon className="h-[18px] w-[18px]" />
         Continue with GitHub

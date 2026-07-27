@@ -37,7 +37,7 @@ export const FloatingInput = React.forwardRef<HTMLInputElement, FloatingInputPro
             aria-invalid={!!error}
             aria-describedby={errorId}
             className={cn(
-              "peer h-14 w-full rounded-xl border bg-white pl-10 pt-4 text-sm text-auth-text outline-none transition-all duration-150",
+              "peer h-14 w-full rounded-xl border bg-auth-card pl-10 pt-4 text-sm text-auth-text outline-none transition-all duration-150",
               "pr-10",
               "placeholder:text-transparent",
               "focus:border-auth-primary focus:ring-4 focus:ring-auth-primary/10",
@@ -66,7 +66,7 @@ export const FloatingInput = React.forwardRef<HTMLInputElement, FloatingInputPro
               aria-label={showPassword ? "Hide password" : "Show password"}
               aria-pressed={showPassword}
               tabIndex={0}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-auth-muted transition-colors hover:text-auth-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-auth-primary focus-visible:ring-offset-2 rounded-sm"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-auth-muted transition-colors hover:text-auth-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-auth-primary focus-visible:ring-offset-2 focus-visible:ring-offset-auth-bg rounded-sm"
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>

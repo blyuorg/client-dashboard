@@ -29,10 +29,10 @@ const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
-        "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-auth-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-auth-primary focus-visible:ring-offset-2 focus-visible:ring-offset-auth-bg disabled:cursor-not-allowed disabled:opacity-50",
         checked
           ? "border-auth-primary bg-auth-primary text-white"
-          : "border-auth-border bg-white",
+          : "border-auth-border bg-auth-card",
         className
       )}
       {...props}

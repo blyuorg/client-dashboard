@@ -11,6 +11,7 @@ import { AuthCard, AuthCardHeader } from "@/components/auth/auth-card";
 import { FloatingInput } from "@/components/auth/floating-input";
 import { PasswordStrengthMeter } from "@/components/auth/password-strength-meter";
 import { SocialAuthButtons } from "@/components/auth/social-auth-buttons";
+import { OAuthTransitionOverlay } from "@/components/auth/oauth-transition-overlay";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RippleLayer } from "@/components/auth/ripple-layer";
 import { useRipple } from "@/hooks/use-ripple";
@@ -19,10 +20,12 @@ import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
+type OAuthUiState = "idle" | "connecting" | "error";
+
 export default function RegisterPage() {
   const router = useRouter();
   const [confirmationSent, setConfirmationSent] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [oauthState, setOauthState] = useState<OAuthUiState>("idle");
   const submitRipple = useRipple();
   const {
     register,
@@ -61,18 +64,32 @@ export default function RegisterPage() {
   }
 
   async function handleGoogleSignIn() {
-    setIsGoogleLoading(true);
+    setOauthState("connecting");
     const { error } = await signInWithGoogle();
 
     if (error) {
-      toast({ variant: "destructive", title: "Google sign-up failed", description: error });
-      setIsGoogleLoading(false);
+      setOauthState("error");
     }
   }
 
+  const oauthOverlay = (
+    <>
+      {oauthState === "connecting" && <OAuthTransitionOverlay variant="connecting" />}
+      {oauthState === "error" && (
+        <OAuthTransitionOverlay
+          variant="error"
+          onRetry={handleGoogleSignIn}
+          onBackToLogin={() => setOauthState("idle")}
+        />
+      )}
+    </>
+  );
+
   if (confirmationSent) {
     return (
-      <AuthCard>
+      <>
+        {oauthOverlay}
+        <AuthCard>
         <div className="flex flex-col items-center py-2 text-center">
           <motion.div
             initial={{ scale: 0.5, opacity: 0 }}
@@ -91,19 +108,22 @@ export default function RegisterPage() {
             Back to login
           </Link>
         </div>
-      </AuthCard>
+        </AuthCard>
+      </>
     );
   }
 
   const password = watch("password");
 
   return (
-    <AuthCard>
+    <>
+      {oauthOverlay}
+      <AuthCard>
       <AuthCardHeader title="Create Your Account" subtitle="Get started with your Blyu client portal." />
 
       <SocialAuthButtons
         mode="signup"
-        googleLoading={isGoogleLoading}
+        googleLoading={oauthState === "connecting"}
         onGoogleClick={handleGoogleSignIn}
         disabled={isSubmitting}
       />
@@ -182,11 +202,11 @@ export default function RegisterPage() {
         <button
           type="submit"
           onMouseDown={submitRipple.addRipple}
-          disabled={isSubmitting || isGoogleLoading}
+          disabled={isSubmitting || oauthState === "connecting"}
           className={cn(
             "relative flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-auth-primary text-sm font-medium text-white transition-all",
             "hover:bg-auth-primary-hover active:scale-[0.99]",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-auth-primary focus-visible:ring-offset-2",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-auth-primary focus-visible:ring-offset-2 focus-visible:ring-offset-auth-bg",
             "disabled:cursor-not-allowed disabled:opacity-60"
           )}
         >
@@ -202,6 +222,7 @@ export default function RegisterPage() {
           Sign In
         </Link>
       </p>
-    </AuthCard>
+      </AuthCard>
+    </>
   );
 }

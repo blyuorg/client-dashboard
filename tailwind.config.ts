@@ -54,22 +54,26 @@ const config: Config = {
         warning: "hsl(var(--warning))",
         // Fixed premium palette for the /login, /register, /forgot-password,
         // /reset-password flow — deliberately independent of the app's
-        // --background/--foreground theme tokens (which flip with dark mode)
-        // so the auth pages render this exact light design regardless of the
-        // visitor's theme preference, the same way Stripe/Linear/Clerk auth
-        // screens don't follow the product's own dark mode.
+        // --background/--foreground theme tokens so the auth pages render
+        // this exact dark-glass design regardless of the visitor's theme
+        // preference, the same way Stripe/Linear/Vercel auth screens don't
+        // follow the product's own light/dark toggle. Component classNames
+        // reference these auth-* names throughout; only the values below
+        // needed to change to re-skin the whole flow from the previous
+        // light design to this one.
         auth: {
-          bg: "#F8FAFC",
-          card: "#FFFFFF",
-          text: "#0F172A",
-          muted: "#64748B",
-          border: "#E2E8F0",
+          bg: "#09090B",
+          card: "rgba(255,255,255,0.04)",
+          cardHover: "rgba(255,255,255,0.07)",
+          text: "#FAFAFA",
+          muted: "#A1A1AA",
+          border: "rgba(255,255,255,0.1)",
           success: "#22C55E",
           danger: "#EF4444",
           warning: "#F59E0B",
           primary: {
-            DEFAULT: "#2563EB",
-            hover: "#1D4ED8",
+            DEFAULT: "#3B82F6",
+            hover: "#60A5FA",
             foreground: "#FFFFFF",
           },
         },
@@ -87,11 +91,32 @@ const config: Config = {
           "0%": { transform: "scale(0)", opacity: "0.45" },
           "100%": { transform: "scale(2.5)", opacity: "0" },
         },
+        float: {
+          "0%, 100%": { transform: "translateY(0) translateX(0)" },
+          "50%": { transform: "translateY(-14px) translateX(4px)" },
+        },
+        blob: {
+          "0%, 100%": { transform: "translate(0, 0) scale(1)" },
+          "33%": { transform: "translate(4%, -6%) scale(1.08)" },
+          "66%": { transform: "translate(-3%, 4%) scale(0.96)" },
+        },
+        "grid-pan": {
+          "0%": { backgroundPosition: "0 0" },
+          "100%": { backgroundPosition: "48px 48px" },
+        },
+        "progress-fill": {
+          "0%": { width: "0%" },
+          "100%": { width: "100%" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         ripple: "ripple 0.6s ease-out",
+        float: "float 6s ease-in-out infinite",
+        blob: "blob 16s ease-in-out infinite",
+        "grid-pan": "grid-pan 20s linear infinite",
+        "progress-fill": "progress-fill 2s linear forwards",
       },
     },
   },

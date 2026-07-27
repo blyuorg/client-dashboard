@@ -96,7 +96,7 @@ export function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
           className={cn(
             "flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-auth-primary text-sm font-medium text-white transition-all",
             "hover:bg-auth-primary-hover active:scale-[0.99]",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-auth-primary focus-visible:ring-offset-2",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-auth-primary focus-visible:ring-offset-2 focus-visible:ring-offset-auth-bg",
             "disabled:cursor-not-allowed disabled:opacity-60"
           )}
         >

@@ -1,55 +1,66 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CheckCircle2 } from "lucide-react";
+import { ShieldCheck, Chrome, Lock, Sparkles } from "lucide-react";
 import { BlyuLogo } from "@/components/auth/blyu-logo";
+import { DashboardIllustration } from "@/components/auth/dashboard-illustration";
 
 const FEATURES = [
-  "Secure Authentication",
-  "Google Sign In",
-  "Real-time Project Tracking",
-  "Document Management",
-  "End-to-End Encryption",
+  { icon: ShieldCheck, label: "Secure Authentication" },
+  { icon: Chrome, label: "Google OAuth" },
+  { icon: Lock, label: "End-to-End Encryption" },
+  { icon: Sparkles, label: "Powered by Supabase" },
 ];
 
 export function BrandingPanel() {
   return (
-    <div className="flex h-full flex-col justify-between px-10 py-12 lg:px-16 lg:py-16">
-      <BlyuLogo />
+    <div className="flex h-full flex-col justify-between gap-10 px-12 py-14 xl:px-20 xl:py-16">
+      <BlyuLogo markClassName="h-11 w-11 text-lg" className="gap-3" />
 
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="max-w-md"
-      >
-        <h1 className="font-display text-3xl font-semibold leading-tight tracking-tight text-auth-text lg:text-4xl">
-          Manage Your Projects With Confidence
-        </h1>
-        <p className="mt-4 text-base leading-relaxed text-auth-muted">
-          Track projects, invoices, files, tasks, payments and communication from one secure
-          dashboard.
-        </p>
+      <div className="grid flex-1 items-center gap-12 xl:grid-cols-[1fr_1fr] xl:gap-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
+          <h1 className="font-display text-4xl font-semibold leading-[1.1] tracking-tight text-auth-text xl:text-5xl">
+            Welcome back to
+            <br />
+            Blyu Client Portal.
+          </h1>
+          <p className="mt-5 max-w-md text-base leading-relaxed text-auth-muted">
+            Manage projects, invoices, documents, messages and billing from one secure dashboard.
+          </p>
 
-        <ul className="mt-8 space-y-3">
-          {FEATURES.map((feature, i) => (
-            <motion.li
-              key={feature}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4, delay: 0.15 + i * 0.07, ease: "easeOut" }}
-              className="flex items-center gap-2.5 text-sm text-auth-text"
-            >
-              <CheckCircle2 className="h-[18px] w-[18px] shrink-0 text-auth-success" />
-              {feature}
-            </motion.li>
-          ))}
-        </ul>
-      </motion.div>
+          <ul className="mt-8 flex flex-col gap-3">
+            {FEATURES.map((feature, i) => (
+              <motion.li
+                key={feature.label}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4, delay: 0.2 + i * 0.08, ease: "easeOut" }}
+                className="flex items-center gap-2.5 text-sm text-auth-text"
+              >
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-auth-primary/15">
+                  <feature.icon className="h-3.5 w-3.5 text-auth-primary" />
+                </span>
+                {feature.label}
+              </motion.li>
+            ))}
+          </ul>
+        </motion.div>
 
-      <p className="text-xs text-auth-muted">
-        Copyright &copy; {new Date().getFullYear()} Blyu
-      </p>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.7, delay: 0.3, ease: "easeOut" }}
+          className="hidden xl:block"
+        >
+          <DashboardIllustration />
+        </motion.div>
+      </div>
+
+      <p className="text-xs text-auth-muted">Copyright &copy; {new Date().getFullYear()} Blyu</p>
     </div>
   );
 }

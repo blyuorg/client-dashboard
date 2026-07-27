@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Mail, Lock, Loader2, ShieldCheck } from "lucide-react";
@@ -10,6 +10,7 @@ import { AuthCard, AuthCardHeader } from "@/components/auth/auth-card";
 import { FloatingInput } from "@/components/auth/floating-input";
 import { SocialAuthButtons } from "@/components/auth/social-auth-buttons";
 import { ForgotPasswordModal } from "@/components/auth/forgot-password-modal";
+import { OAuthTransitionOverlay } from "@/components/auth/oauth-transition-overlay";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RippleLayer } from "@/components/auth/ripple-layer";
 import { useRipple } from "@/hooks/use-ripple";
@@ -18,10 +19,11 @@ import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
+type OAuthUiState = "idle" | "connecting" | "error";
+
 function LoginForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [oauthState, setOauthState] = useState<OAuthUiState>("idle");
   const [rememberMe, setRememberMe] = useState(true);
   const [forgotOpen, setForgotOpen] = useState(false);
   const signInRipple = useRipple();
@@ -30,16 +32,6 @@ function LoginForm() {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginInput>({ resolver: zodResolver(loginSchema) });
-
-  useEffect(() => {
-    if (searchParams.get("error") === "oauth_failed") {
-      toast({
-        variant: "destructive",
-        title: "Google sign-in failed",
-        description: "Please try again or use your email and password.",
-      });
-    }
-  }, [searchParams]);
 
   async function onSubmit(values: LoginInput) {
     const { error } = await signIn(values.email, values.password);
@@ -54,24 +46,37 @@ function LoginForm() {
   }
 
   async function handleGoogleSignIn() {
-    setIsGoogleLoading(true);
+    // Shows the "Connecting your Google Account" transition immediately
+    // instead of the browser jumping straight to a blank navigation — the
+    // actual signInWithOAuth() call and its redirect behavior are unchanged.
+    setOauthState("connecting");
     const { error } = await signInWithGoogle();
 
     // On success the browser is already navigating to Google, so there's
     // nothing left to do here — only an error leaves us on this page.
     if (error) {
       toast({ variant: "destructive", title: "Google sign-in failed", description: error });
-      setIsGoogleLoading(false);
+      setOauthState("error");
     }
   }
 
   return (
-    <AuthCard>
-      <AuthCardHeader title="Welcome Back" subtitle="Sign in to continue to your dashboard." />
+    <>
+      {oauthState === "connecting" && <OAuthTransitionOverlay variant="connecting" />}
+      {oauthState === "error" && (
+        <OAuthTransitionOverlay
+          variant="error"
+          onRetry={handleGoogleSignIn}
+          onBackToLogin={() => setOauthState("idle")}
+        />
+      )}
+
+      <AuthCard>
+        <AuthCardHeader title="Welcome Back" subtitle="Sign in to continue to your dashboard." />
 
       <SocialAuthButtons
         mode="signin"
-        googleLoading={isGoogleLoading}
+        googleLoading={oauthState === "connecting"}
         onGoogleClick={handleGoogleSignIn}
         disabled={isSubmitting}
       />
@@ -119,11 +124,11 @@ function LoginForm() {
         <button
           type="submit"
           onMouseDown={signInRipple.addRipple}
-          disabled={isSubmitting || isGoogleLoading}
+          disabled={isSubmitting || oauthState === "connecting"}
           className={cn(
             "relative flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-auth-primary text-sm font-medium text-white transition-all",
             "hover:bg-auth-primary-hover active:scale-[0.99]",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-auth-primary focus-visible:ring-offset-2",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-auth-primary focus-visible:ring-offset-2 focus-visible:ring-offset-auth-bg",
             "disabled:cursor-not-allowed disabled:opacity-60"
           )}
         >
@@ -146,7 +151,8 @@ function LoginForm() {
       </p>
 
       <ForgotPasswordModal open={forgotOpen} onOpenChange={setForgotOpen} />
-    </AuthCard>
+      </AuthCard>
+    </>
   );
 }
 
