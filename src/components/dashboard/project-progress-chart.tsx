@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CHART_COLORS, chartAxisColor, chartGridColor, chartTooltipStyle, EmptyChartState } from "./chart-theme";
 import type { ProjectSummary } from "@/lib/dashboard/compute";
@@ -11,14 +12,18 @@ function colorForProgress(percent: number) {
 }
 
 export function ProjectProgressChart({ summaries }: { summaries: ProjectSummary[] }) {
+  const data = useMemo(
+    () =>
+      summaries.map((s) => ({
+        name: s.project.title,
+        progress: s.project.progress_percent,
+      })),
+    [summaries]
+  );
+
   if (summaries.length === 0) {
     return <EmptyChartState message="No projects yet — progress will show up here once one is assigned." />;
   }
-
-  const data = summaries.map((s) => ({
-    name: s.project.title,
-    progress: s.project.progress_percent,
-  }));
 
   return (
     <div style={{ height: Math.max(220, data.length * 44) }} className="w-full">

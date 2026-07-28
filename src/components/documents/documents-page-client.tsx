@@ -1,13 +1,23 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { DocumentsPageHeader, type DocumentSortKey } from "@/components/documents/documents-page-header";
 import { FilterBar } from "@/components/documents/filter-bar";
 import { OverviewCards } from "@/components/documents/overview-cards";
 import { FolderGrid } from "@/components/documents/folder-grid";
 import { DocumentWorkspace } from "@/components/documents/document-workspace";
-import { PreviewPanel, PreviewPanelDrawer } from "@/components/documents/preview-panel";
 import type { DocumentRecord, DocumentsView } from "@/lib/documents/types";
+
+// The preview panel only renders meaningful content once a document is
+// selected (starts null on every visit), so its chunk is fetched on demand
+// instead of shipping with the rest of the documents page.
+const PreviewPanel = dynamic(() =>
+  import("@/components/documents/preview-panel").then((m) => m.PreviewPanel)
+);
+const PreviewPanelDrawer = dynamic(() =>
+  import("@/components/documents/preview-panel").then((m) => m.PreviewPanelDrawer)
+);
 
 // No documents are seeded here — this page renders purely from empty
 // state until a real documents API/table is connected.

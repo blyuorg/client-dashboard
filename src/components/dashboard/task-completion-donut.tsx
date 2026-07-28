@@ -1,18 +1,24 @@
 "use client";
 
+import { useMemo } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { CHART_COLORS, chartTooltipStyle, EmptyChartState } from "./chart-theme";
 
 export function TaskCompletionDonut({ completed, remaining }: { completed: number; remaining: number }) {
   const total = completed + remaining;
+
+  const data = useMemo(
+    () =>
+      [
+        { name: "Completed", value: completed, color: CHART_COLORS.success },
+        { name: "Remaining", value: remaining, color: CHART_COLORS.primary },
+      ].filter((d) => d.value > 0),
+    [completed, remaining]
+  );
+
   if (total === 0) {
     return <EmptyChartState message="No tasks yet — this fills in once tasks are created." />;
   }
-
-  const data = [
-    { name: "Completed", value: completed, color: CHART_COLORS.success },
-    { name: "Remaining", value: remaining, color: CHART_COLORS.primary },
-  ].filter((d) => d.value > 0);
 
   const percent = Math.round((completed / total) * 100);
 

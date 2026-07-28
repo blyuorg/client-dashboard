@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { HealthBadge } from "./badges";
@@ -41,13 +42,39 @@ export function ProjectDrawer({
   onOpenChange: (open: boolean) => void;
 }) {
   const projectId = summary?.project.id;
-  const projectMilestones = milestones.filter((m) => m.project_id === projectId);
-  const projectActivities = activities.filter((a) => a.project_id === projectId);
-  const projectApprovals = approvals.filter((a) => a.project_id === projectId);
-  const projectDocuments = documents.filter((d) => d.project_id === projectId);
-  const projectMessages = messages.filter((m) => m.project_id === projectId);
-  const projectMeetings = meetings.filter((m) => m.project_id === projectId);
-  const projectInvoices = invoices.filter((i) => i.project_id === projectId);
+
+  // The parent (ProjectsPageClient) re-renders on every keystroke in its
+  // search box; these filters previously re-scanned every array on each of
+  // those renders even though the drawer's data only changes when the open
+  // project or the underlying datasets change.
+  const projectMilestones = useMemo(
+    () => milestones.filter((m) => m.project_id === projectId),
+    [milestones, projectId]
+  );
+  const projectActivities = useMemo(
+    () => activities.filter((a) => a.project_id === projectId),
+    [activities, projectId]
+  );
+  const projectApprovals = useMemo(
+    () => approvals.filter((a) => a.project_id === projectId),
+    [approvals, projectId]
+  );
+  const projectDocuments = useMemo(
+    () => documents.filter((d) => d.project_id === projectId),
+    [documents, projectId]
+  );
+  const projectMessages = useMemo(
+    () => messages.filter((m) => m.project_id === projectId),
+    [messages, projectId]
+  );
+  const projectMeetings = useMemo(
+    () => meetings.filter((m) => m.project_id === projectId),
+    [meetings, projectId]
+  );
+  const projectInvoices = useMemo(
+    () => invoices.filter((i) => i.project_id === projectId),
+    [invoices, projectId]
+  );
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

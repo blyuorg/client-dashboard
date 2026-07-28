@@ -1,13 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { Sparkles } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ConversationsSidebar } from "@/components/messages/conversations-sidebar";
 import { ChatWindow } from "@/components/messages/chat-window";
 import { ProjectPanel } from "@/components/messages/project-panel";
-import { AiAssistantPanel } from "@/components/messages/ai-assistant-panel";
 import type { ConversationSummary, ConversationTab } from "@/lib/messages/types";
+
+// Hidden behind an xl: breakpoint or a Sheet toggle on smaller viewports —
+// never needed on first paint, so it's fetched as its own chunk instead of
+// shipping with the rest of the messages page.
+const AiAssistantPanel = dynamic(() =>
+  import("@/components/messages/ai-assistant-panel").then((m) => m.AiAssistantPanel)
+);
 
 // No conversations are seeded here — this page renders purely from
 // empty state until a real messaging API/table is connected.

@@ -64,3 +64,19 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Respect the OS-level "reduce motion" preference: shrink animation/transition
+   durations to near-zero instead of removing them outright, so elements that
+   rely on a transition firing (e.g. Radix open/close state) still work, they
+   just don't visibly move. Scoped to prefers-reduced-motion so it never
+   changes anything for users who haven't opted in at the OS level. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

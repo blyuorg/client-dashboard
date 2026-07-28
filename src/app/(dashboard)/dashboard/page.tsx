@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { ProjectAnalytics } from "@/components/dashboard/project-analytics";
 import { ProjectsTable } from "@/components/dashboard/projects-table";
@@ -14,18 +14,16 @@ import {
 } from "@/lib/dashboard/compute";
 
 export default async function DashboardPage() {
+  const user = await getUser();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user!.id).single();
-
-  const { data: projects } = await supabase
-    .from("projects")
-    .select("*")
-    .eq("client_id", user!.id)
-    .order("created_at", { ascending: false });
+  // profile and projects have no data dependency on each other — resolving
+  // them together instead of one-after-another cuts a full round trip off
+  // this request.
+  const [{ data: profile }, { data: projects }] = await Promise.all([
+    supabase.from("profiles").select("full_name, owner_name, company_name").eq("id", user!.id).single(),
+    supabase.from("projects").select("*").eq("client_id", user!.id).order("created_at", { ascending: false }),
+  ]);
 
   const projectIds = (projects ?? []).map((p) => p.id);
 
