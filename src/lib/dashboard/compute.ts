@@ -1,7 +1,34 @@
 import type { Invoice, Milestone, Payment, Project, Task, TaskStatus } from "@/types/database";
 
-export type ProjectSummary = {
-  project: Project;
+/**
+ * The dashboard only ever needs this subset of Project's columns — narrowing
+ * the `select()` in dashboard/page.tsx to just these avoids pulling
+ * `category`/`requirements`/`deliverables`/`estimated_completion`/
+ * `actual_completion` (unused here) over the wire. Every function below is
+ * generic over `P` so the same code still works with the full `Project` type
+ * that /project's page.tsx selects.
+ */
+export type DashboardProjectFields = Pick<
+  Project,
+  | "id"
+  | "title"
+  | "status"
+  | "priority"
+  | "progress_percent"
+  | "start_date"
+  | "deadline"
+  | "assigned_team"
+  | "budget"
+  | "description"
+>;
+
+type MinimalTask = Pick<Task, "project_id" | "status">;
+type MinimalMilestone = Pick<Milestone, "project_id" | "status" | "order_index" | "title" | "completed_at">;
+type MinimalInvoice = Pick<Invoice, "id" | "project_id" | "status" | "total">;
+type MinimalPayment = Pick<Payment, "invoice_id" | "status" | "amount">;
+
+export type ProjectSummary<P extends Pick<Project, "id" | "budget" | "assigned_team"> = Project> = {
+  project: P;
   totalTasks: number;
   completedTasks: number;
   pendingTasks: number;
@@ -14,7 +41,7 @@ export type ProjectSummary = {
   currentPhase: string;
 };
 
-function currentPhaseFor(projectId: string, milestones: Milestone[]): string {
+function currentPhaseFor(projectId: string, milestones: MinimalMilestone[]): string {
   const projectMilestones = milestones
     .filter((m) => m.project_id === projectId)
     .sort((a, b) => a.order_index - b.order_index);
@@ -31,7 +58,7 @@ function currentPhaseFor(projectId: string, milestones: Milestone[]): string {
   return "—";
 }
 
-function sumByProject(invoices: Invoice[], payments: Payment[]) {
+function sumByProject(invoices: MinimalInvoice[], payments: MinimalPayment[]) {
   const invoiceToProject = new Map(invoices.map((i) => [i.id, i.project_id]));
   const invoicedByProject = new Map<string, number>();
   for (const invoice of invoices) {
@@ -53,13 +80,13 @@ function sumByProject(invoices: Invoice[], payments: Payment[]) {
   return { invoicedByProject, paidByProject };
 }
 
-export function buildProjectSummaries(
-  projects: Project[],
-  tasks: Task[],
-  invoices: Invoice[],
-  payments: Payment[],
-  milestones: Milestone[]
-): ProjectSummary[] {
+export function buildProjectSummaries<P extends Pick<Project, "id" | "budget" | "assigned_team">>(
+  projects: P[],
+  tasks: MinimalTask[],
+  invoices: MinimalInvoice[],
+  payments: MinimalPayment[],
+  milestones: MinimalMilestone[]
+): ProjectSummary<P>[] {
   const { invoicedByProject, paidByProject } = sumByProject(invoices, payments);
 
   return projects.map((project) => {
@@ -94,9 +121,9 @@ export type DashboardKpis = {
 };
 
 export function computeKpis(
-  projects: Project[],
-  milestones: Milestone[],
-  summaries: ProjectSummary[]
+  projects: Pick<Project, "progress_percent">[],
+  milestones: Pick<Milestone, "status">[],
+  summaries: Pick<ProjectSummary, "budget" | "outstandingBalance">[]
 ): DashboardKpis {
   const totalProjectValue = summaries.reduce((sum, s) => sum + s.budget, 0);
   const outstandingBalance = summaries.reduce((sum, s) => sum + s.outstandingBalance, 0);
@@ -118,7 +145,7 @@ const TASK_STATUSES: TaskStatus[] = ["pending", "in_progress", "completed", "del
 
 export type TaskOverview = Record<TaskStatus, number> & { total: number };
 
-export function computeTaskOverview(tasks: Task[]): TaskOverview {
+export function computeTaskOverview(tasks: Pick<Task, "status">[]): TaskOverview {
   const counts = Object.fromEntries(TASK_STATUSES.map((s) => [s, 0])) as Record<TaskStatus, number>;
   for (const task of tasks) counts[task.status]++;
   return { total: tasks.length, ...counts };
@@ -131,7 +158,9 @@ export type BillingChartRow = {
   remaining: number;
 };
 
-export function computeBillingChartData(summaries: ProjectSummary[]): BillingChartRow[] {
+export function computeBillingChartData<P extends Pick<Project, "id" | "budget" | "assigned_team" | "title">>(
+  summaries: ProjectSummary<P>[]
+): BillingChartRow[] {
   return summaries
     .filter((s) => s.budget > 0)
     .map((s) => ({
@@ -150,9 +179,15 @@ export type TimelinePoint = { date: string } & Record<string, string | number>;
  * cumulative % of a project's milestones completed as of that date, carried
  * forward across all projects (step chart), not a fabricated trend.
  */
-export function computeProjectTimeline(projects: Project[], milestones: Milestone[]): TimelinePoint[] {
+export function computeProjectTimeline(
+  projects: Pick<Project, "id" | "title">[],
+  milestones: Pick<Milestone, "project_id" | "status" | "completed_at">[]
+): TimelinePoint[] {
   const completed = milestones
-    .filter((m): m is Milestone & { completed_at: string } => m.status === "completed" && !!m.completed_at)
+    .filter(
+      (m): m is Pick<Milestone, "project_id" | "status" | "completed_at"> & { completed_at: string } =>
+        m.status === "completed" && !!m.completed_at
+    )
     .sort((a, b) => new Date(a.completed_at).getTime() - new Date(b.completed_at).getTime());
 
   if (completed.length === 0) return [];

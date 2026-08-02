@@ -108,6 +108,10 @@ const config: Config = {
           "0%": { width: "0%" },
           "100%": { width: "100%" },
         },
+        "fade-in-up": {
+          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -117,6 +121,7 @@ const config: Config = {
         blob: "blob 16s ease-in-out infinite",
         "grid-pan": "grid-pan 20s linear infinite",
         "progress-fill": "progress-fill 2s linear forwards",
+        "fade-in-up": "fade-in-up 0.25s ease-out both",
       },
     },
   },

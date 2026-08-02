@@ -34,5 +34,6 @@ export const config = {
     "/register",
     "/forgot-password",
     "/reset-password",
+    "/auth/callback",
   ],
 };

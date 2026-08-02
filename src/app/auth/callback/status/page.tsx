@@ -4,9 +4,9 @@ import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { OAuthTransitionOverlay } from "@/components/auth/oauth-transition-overlay";
 import { AuthBackground } from "@/components/auth/auth-background";
-import { signInWithGoogle } from "@/lib/supabase/auth";
 
-const REDIRECT_DELAY_MS = 2000;
+const SUCCESS_REDIRECT_DELAY_MS = 2000;
+const ERROR_REDIRECT_DELAY_MS = 3000;
 
 function CallbackStatus() {
   const router = useRouter();
@@ -14,11 +14,20 @@ function CallbackStatus() {
   const status = searchParams.get("status");
 
   useEffect(() => {
-    if (status !== "success") return;
+    if (status === "success") {
+      const timer = setTimeout(() => {
+        router.push("/dashboard");
+        router.refresh();
+      }, SUCCESS_REDIRECT_DELAY_MS);
+      return () => clearTimeout(timer);
+    }
+
+    // Any non-"success" value (including missing/malformed params) is treated
+    // as a failed attempt — show the error state briefly then redirect to login
+    // with an error param so the login page can show a friendly toast.
     const timer = setTimeout(() => {
-      router.push("/dashboard");
-      router.refresh();
-    }, REDIRECT_DELAY_MS);
+      router.push("/login?error=google_auth_failed");
+    }, ERROR_REDIRECT_DELAY_MS);
     return () => clearTimeout(timer);
   }, [status, router]);
 
@@ -28,13 +37,10 @@ function CallbackStatus() {
       {status === "success" ? (
         <OAuthTransitionOverlay variant="success" />
       ) : (
-        // Any non-"success" value (including a missing/malformed param from
-        // a direct visit to this URL) is treated as a failed attempt — same
-        // signInWithGoogle() call the login page's Google button uses,
-        // unchanged.
         <OAuthTransitionOverlay
           variant="error"
-          onRetry={() => signInWithGoogle()}
+          message="Unable to sign in with Google. Redirecting back to login…"
+          onRetry={() => router.push("/login")}
           onBackToLogin={() => router.push("/login")}
         />
       )}

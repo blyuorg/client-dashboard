@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CHART_COLORS, chartAxisColor, chartGridColor, chartTooltipStyle, EmptyChartState } from "./chart-theme";
-import type { ProjectSummary } from "@/lib/dashboard/compute";
+import type { DashboardProjectFields, ProjectSummary } from "@/lib/dashboard/compute";
 
 function colorForProgress(percent: number) {
   if (percent >= 75) return CHART_COLORS.success;
@@ -11,7 +11,7 @@ function colorForProgress(percent: number) {
   return CHART_COLORS.warning;
 }
 
-export function ProjectProgressChart({ summaries }: { summaries: ProjectSummary[] }) {
+export function ProjectProgressChart({ summaries }: { summaries: ProjectSummary<DashboardProjectFields>[] }) {
   const data = useMemo(
     () =>
       summaries.map((s) => ({

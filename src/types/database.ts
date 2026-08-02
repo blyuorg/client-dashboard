@@ -18,6 +18,7 @@ export type PaymentMethod = "bank_transfer" | "card" | "upi" | "cash" | "other";
 export type PaymentStatus = "pending" | "success" | "failed" | "refunded";
 export type ApprovalStatus = "pending" | "approved" | "changes_requested";
 export type DocumentFolder = "contracts" | "invoices" | "design_files" | "requirements" | "reports" | "others";
+export type BusinessType = "individual" | "startup" | "sme" | "enterprise" | "other";
 
 export type Profile = {
   id: string;
@@ -30,7 +31,10 @@ export type Profile = {
   address: string | null;
   gst_number: string | null;
   website: string | null;
+  business_type: BusinessType | null;
   avatar_url: string | null;
+  preferred_communication: string | null;
+  notes: string | null;
   created_at: string;
   updated_at: string;
 };

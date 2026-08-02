@@ -8,10 +8,16 @@ import { Progress } from "@/components/ui/progress";
 import { ProjectStatusBadge } from "./status-badge";
 import { ProjectDetailDialog } from "./project-detail-dialog";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { ProjectSummary } from "@/lib/dashboard/compute";
+import type { DashboardProjectFields, ProjectSummary } from "@/lib/dashboard/compute";
 
-export function ProjectsTable({ summaries, clientName }: { summaries: ProjectSummary[]; clientName: string }) {
-  const [selected, setSelected] = useState<ProjectSummary | null>(null);
+export function ProjectsTable({
+  summaries,
+  clientName,
+}: {
+  summaries: ProjectSummary<DashboardProjectFields>[];
+  clientName: string;
+}) {
+  const [selected, setSelected] = useState<ProjectSummary<DashboardProjectFields> | null>(null);
 
   return (
     <Card>

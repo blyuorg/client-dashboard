@@ -1,6 +1,3 @@
-"use client";
-
-import { motion } from "framer-motion";
 import { FolderKanban, Wallet, AlertCircle, TrendingUp, ClipboardCheck, PackageCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
@@ -51,24 +48,21 @@ export function KpiCards({ kpis }: { kpis: DashboardKpis }) {
       {items(kpis).map((item, i) => {
         const Icon = item.icon;
         return (
-          <motion.div
+          <Card
             key={item.label}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: i * 0.04 }}
+            className="h-full animate-fade-in-up transition-colors hover:border-primary/40"
+            style={{ animationDelay: `${i * 40}ms` }}
           >
-            <Card className="h-full transition-colors hover:border-primary/40">
-              <CardContent className="flex flex-col gap-3 p-4">
-                <div className={`flex h-9 w-9 items-center justify-center rounded-lg bg-secondary ${item.accent}`}>
-                  <Icon className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-lg font-semibold leading-tight">{item.value}</p>
-                  <p className="text-xs text-muted-foreground">{item.label}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+            <CardContent className="flex flex-col gap-3 p-4">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-lg bg-secondary ${item.accent}`}>
+                <Icon className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-lg font-semibold leading-tight">{item.value}</p>
+                <p className="text-xs text-muted-foreground">{item.label}</p>
+              </div>
+            </CardContent>
+          </Card>
         );
       })}
     </div>

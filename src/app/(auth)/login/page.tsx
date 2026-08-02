@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Mail, Lock, Loader2, ShieldCheck } from "lucide-react";
@@ -23,6 +23,7 @@ type OAuthUiState = "idle" | "connecting" | "error";
 
 function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [oauthState, setOauthState] = useState<OAuthUiState>("idle");
   const [rememberMe, setRememberMe] = useState(true);
   const [forgotOpen, setForgotOpen] = useState(false);
@@ -32,6 +33,20 @@ function LoginForm() {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginInput>({ resolver: zodResolver(loginSchema) });
+
+  // Show a friendly error when redirected back from a failed OAuth callback.
+  useEffect(() => {
+    const error = searchParams.get("error");
+    if (error === "google_auth_failed") {
+      toast({
+        variant: "destructive",
+        title: "Google sign-in failed",
+        description: "Unable to sign in with Google. Please try again.",
+      });
+      // Clean the URL so refreshing doesn't re-show the toast.
+      router.replace("/login", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   async function onSubmit(values: LoginInput) {
     const { error } = await signIn(values.email, values.password);

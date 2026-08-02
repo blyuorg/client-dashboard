@@ -28,7 +28,11 @@ function metaFor(action: string) {
   );
 }
 
-export function RecentActivity({ activities }: { activities: Activity[] }) {
+export function RecentActivity({
+  activities,
+}: {
+  activities: Pick<Activity, "id" | "action" | "created_at">[];
+}) {
   return (
     <Card>
       <CardHeader>

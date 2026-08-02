@@ -1,20 +1,23 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServerClient } from "@supabase/ssr";
+
+type CookieToSet = { name: string; value: string; options?: Record<string, unknown> };
 
 /**
  * Exchanges the OAuth `code` Supabase appends after a Google redirect for a
- * session. `x-forwarded-host` is trusted (instead of the request's own
- * origin) because Vercel terminates TLS at a proxy — using `origin` directly
- * there would redirect to an internal hostname instead of the public one.
+ * session, writing the resulting cookies directly into the response.
  *
- * The exchange/error logic below is unchanged from before. The only edit for
- * the dark-glass redesign is the redirect *destination*: both branches now
- * land on the client-rendered /auth/callback/status page (which shows the
- * animated success/failure state the design calls for) instead of jumping
- * straight to /dashboard or /login — that page does the final navigation
- * itself after the transition finishes. A bare Route Handler can't render
- * that UI, so this one-hop redirect is the minimal way to get it without
- * touching how the session is actually established.
+ * CRITICAL: This does NOT use the shared `createClient()` from server.ts.
+ * That helper wraps `setAll()` in a try/catch so it can be safely imported
+ * from Server Components (where cookies are read-only). Here in a Route
+ * Handler we *must* write cookies into the `NextResponse` we return — if
+ * `setAll` silently swallows, the session exchange succeeds on Supabase's
+ * end but the browser never receives the session cookie, and the user
+ * appears unauthenticated after the redirect.
+ *
+ * `x-forwarded-host` is trusted (instead of the request's own origin)
+ * because Vercel terminates TLS at a proxy — using `origin` directly there
+ * would redirect to an internal hostname instead of the public one.
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -24,16 +27,53 @@ export async function GET(request: NextRequest) {
   const isLocalEnv = process.env.NODE_ENV === "development";
   const publicOrigin = isLocalEnv || !forwardedHost ? origin : `https://${forwardedHost}`;
 
-  if (code) {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+  // Build the error redirect once — used for missing code, missing env, or
+  // exchange failure.
+  const errorUrl = `${publicOrigin}/auth/callback/status?status=error`;
 
-    if (!error) {
-      return NextResponse.redirect(`${publicOrigin}/auth/callback/status?status=success`);
-    }
+  // Validate env vars before they reach the Supabase constructor.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    console.error("[auth/callback] exchangeCodeForSession failed:", error);
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error(
+      "[auth/callback] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY"
+    );
+    return NextResponse.redirect(errorUrl);
   }
 
-  return NextResponse.redirect(`${publicOrigin}/auth/callback/status?status=error`);
+  if (!code) {
+    console.error("[auth/callback] No code parameter in callback URL");
+    return NextResponse.redirect(errorUrl);
+  }
+
+  // Start with a redirect response — cookie handlers write directly into it,
+  // so the session cookie is part of the response the browser actually sees.
+  const successUrl = `${publicOrigin}/auth/callback/status?status=success`;
+  const response = NextResponse.redirect(successUrl);
+
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet: CookieToSet[]) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          // Set on the request (for downstream middleware/edge) and on the
+          // response (so the browser actually receives the cookie).
+          request.cookies.set(name, value);
+          response.cookies.set(name, value, options);
+        });
+      },
+    },
+  });
+
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+  if (error) {
+    console.error("[auth/callback] exchangeCodeForSession failed:", error.message);
+    return NextResponse.redirect(errorUrl);
+  }
+
+  return response;
 }

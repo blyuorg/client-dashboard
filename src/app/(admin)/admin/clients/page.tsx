@@ -1,16 +1,23 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { ClientsTable } from "@/components/admin/clients-table";
+import { createClient } from "@/lib/supabase/server";
 
-export default function AdminClientsPage() {
+export default async function AdminClientsPage() {
+  const supabase = await createClient();
+  const { data: clients } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("role", "client")
+    .order("company_name", { ascending: true });
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Clients</CardTitle>
-        <CardDescription>Admin view — manage all clients across clients.</CardDescription>
+        <CardDescription>Edit client details — company info, contact, and notes.</CardDescription>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-muted-foreground">
-          Query the `clients` table without a client_id filter (RLS allows admins full access).
-        </p>
+        <ClientsTable clients={clients ?? []} />
       </CardContent>
     </Card>
   );

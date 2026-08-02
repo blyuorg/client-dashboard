@@ -3,7 +3,13 @@
 import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { BillingChartRow, ProjectSummary, TaskOverview, TimelinePoint } from "@/lib/dashboard/compute";
+import type {
+  BillingChartRow,
+  DashboardProjectFields,
+  ProjectSummary,
+  TaskOverview,
+  TimelinePoint,
+} from "@/lib/dashboard/compute";
 
 // recharts (+ its internal d3 deps) is a large client-only bundle; these
 // charts are always below the fold on first paint, so loading them in a
@@ -34,7 +40,7 @@ export function ProjectAnalytics({
   timeline,
   billing,
 }: {
-  summaries: ProjectSummary[];
+  summaries: ProjectSummary<DashboardProjectFields>[];
   taskOverview: TaskOverview;
   timeline: TimelinePoint[];
   billing: BillingChartRow[];

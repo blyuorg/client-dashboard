@@ -19,10 +19,16 @@ export default async function DashboardPage() {
 
   // profile and projects have no data dependency on each other — resolving
   // them together instead of one-after-another cuts a full round trip off
-  // this request.
+  // this request. Each select() below is scoped to exactly the columns the
+  // dashboard renders or computes with (see DashboardProjectFields and the
+  // Minimal* picks in lib/dashboard/compute.ts) instead of `*`.
   const [{ data: profile }, { data: projects }] = await Promise.all([
     supabase.from("profiles").select("full_name, owner_name, company_name").eq("id", user!.id).single(),
-    supabase.from("projects").select("*").eq("client_id", user!.id).order("created_at", { ascending: false }),
+    supabase
+      .from("projects")
+      .select("id, title, status, priority, progress_percent, start_date, deadline, assigned_team, budget, description")
+      .eq("client_id", user!.id)
+      .order("created_at", { ascending: false }),
   ]);
 
   const projectIds = (projects ?? []).map((p) => p.id);
@@ -30,17 +36,20 @@ export default async function DashboardPage() {
   const [{ data: tasks }, { data: milestones }, { data: invoices }, { data: payments }, { data: activities }] =
     await Promise.all([
       projectIds.length
-        ? supabase.from("tasks").select("*").in("project_id", projectIds)
+        ? supabase.from("tasks").select("project_id, status").in("project_id", projectIds)
         : Promise.resolve({ data: [] }),
       projectIds.length
-        ? supabase.from("milestones").select("*").in("project_id", projectIds)
+        ? supabase
+            .from("milestones")
+            .select("project_id, status, order_index, title, completed_at")
+            .in("project_id", projectIds)
         : Promise.resolve({ data: [] }),
-      supabase.from("invoices").select("*").eq("client_id", user!.id),
-      supabase.from("payments").select("*").eq("client_id", user!.id),
+      supabase.from("invoices").select("id, project_id, status, total").eq("client_id", user!.id),
+      supabase.from("payments").select("invoice_id, status, amount").eq("client_id", user!.id),
       projectIds.length
         ? supabase
             .from("activities")
-            .select("*")
+            .select("id, action, created_at")
             .in("project_id", projectIds)
             .order("created_at", { ascending: false })
             .limit(15)

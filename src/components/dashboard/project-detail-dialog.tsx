@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Progress } from "@/components/ui/progress";
 import { ProjectPriorityBadge, ProjectStatusBadge } from "./status-badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { ProjectSummary } from "@/lib/dashboard/compute";
+import type { DashboardProjectFields, ProjectSummary } from "@/lib/dashboard/compute";
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -19,7 +19,7 @@ export function ProjectDetailDialog({
   open,
   onOpenChange,
 }: {
-  summary: ProjectSummary | null;
+  summary: ProjectSummary<DashboardProjectFields> | null;
   clientName: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
