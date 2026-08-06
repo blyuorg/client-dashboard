@@ -9,6 +9,7 @@ import {
   FileText,
   MessageSquare,
   Bell,
+  Shield,
   User,
   Settings,
 } from "lucide-react";
@@ -25,14 +26,17 @@ const navItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function Sidebar() {
+export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
+  const items = isAdmin
+    ? [...navItems, { href: "/admin/projects", label: "Admin", icon: Shield }]
+    : navItems;
 
   return (
     <aside className="hidden w-64 shrink-0 border-r bg-background md:block">
       <div className="flex h-14 items-center border-b px-6 font-semibold">Blyu</div>
       <nav className="flex flex-col gap-1 p-3">
-        {navItems.map((item) => {
+        {items.map((item) => {
           const active = pathname === item.href;
           const Icon = item.icon;
           return (

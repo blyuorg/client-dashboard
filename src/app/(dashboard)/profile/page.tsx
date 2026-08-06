@@ -1,6 +1,11 @@
 import { ProfileCard } from "@/components/profile/profile-card";
+import { createClient, getUser } from "@/lib/supabase/server";
 
-export default function ProfilePage() {
+export default async function ProfilePage() {
+  const user = await getUser();
+  const supabase = await createClient();
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user!.id).single();
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
@@ -8,7 +13,7 @@ export default function ProfilePage() {
         <p className="text-sm text-muted-foreground">View your account information and contact details.</p>
       </div>
 
-      <ProfileCard />
+      <ProfileCard profile={profile} />
     </div>
   );
 }
