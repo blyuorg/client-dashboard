@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { Button } from "@/components/ui/button";
 
 const adminNav = [
   { href: "/admin/clients", label: "Clients" },
@@ -49,7 +51,13 @@ export default async function AdminLayout({
         </nav>
       </aside>
       <div className="flex flex-1 flex-col">
-        <header className="flex h-14 items-center justify-end border-b bg-background px-6">
+        <header className="flex h-14 items-center justify-between border-b bg-background px-6">
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/dashboard">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to dashboard
+            </Link>
+          </Button>
           <ThemeToggle />
         </header>
         <main className="flex-1 bg-muted/20 p-6">{children}</main>
