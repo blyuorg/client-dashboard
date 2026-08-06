@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CHART_COLORS, chartAxisColor, chartGridColor, chartTooltipStyle, EmptyChartState } from "./chart-theme";
 import type { DashboardProjectFields, ProjectSummary } from "@/lib/dashboard/compute";
 
@@ -43,6 +43,13 @@ export function ProjectProgressChart({ summaries }: { summaries: ProjectSummary<
             {data.map((entry) => (
               <Cell key={entry.name} fill={colorForProgress(entry.progress)} />
             ))}
+            <LabelList
+              dataKey="progress"
+              position="right"
+              formatter={(value: number) => `${value}%`}
+              fill={chartAxisColor}
+              fontSize={12}
+            />
           </Bar>
         </BarChart>
       </ResponsiveContainer>

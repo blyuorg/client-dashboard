@@ -1,26 +1,20 @@
-import { FolderKanban, Wallet, AlertCircle, TrendingUp, ClipboardCheck, PackageCheck } from "lucide-react";
+import { FolderKanban, Wallet, TrendingUp, ClipboardCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import type { DashboardKpis } from "@/lib/dashboard/compute";
 
 const items = (kpis: DashboardKpis) => [
   {
-    label: "Total Projects",
+    label: "Projects",
     value: kpis.totalProjects.toString(),
     icon: FolderKanban,
     accent: "text-primary",
   },
   {
-    label: "Total Project Value",
+    label: "Project Value",
     value: formatCurrency(kpis.totalProjectValue),
     icon: Wallet,
     accent: "text-primary",
-  },
-  {
-    label: "Outstanding Balance",
-    value: formatCurrency(kpis.outstandingBalance),
-    icon: AlertCircle,
-    accent: "text-warning",
   },
   {
     label: "Overall Completion",
@@ -34,17 +28,11 @@ const items = (kpis: DashboardKpis) => [
     icon: ClipboardCheck,
     accent: "text-warning",
   },
-  {
-    label: "Completed Deliverables",
-    value: kpis.completedDeliverables.toString(),
-    icon: PackageCheck,
-    accent: "text-success",
-  },
 ];
 
 export function KpiCards({ kpis }: { kpis: DashboardKpis }) {
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {items(kpis).map((item, i) => {
         const Icon = item.icon;
         return (

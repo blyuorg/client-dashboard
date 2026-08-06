@@ -114,19 +114,16 @@ export function buildProjectSummaries<P extends Pick<Project, "id" | "budget" | 
 export type DashboardKpis = {
   totalProjects: number;
   totalProjectValue: number;
-  outstandingBalance: number;
   overallCompletion: number;
   pendingApprovals: number;
-  completedDeliverables: number;
 };
 
 export function computeKpis(
   projects: Pick<Project, "progress_percent">[],
   milestones: Pick<Milestone, "status">[],
-  summaries: Pick<ProjectSummary, "budget" | "outstandingBalance">[]
+  summaries: Pick<ProjectSummary, "budget">[]
 ): DashboardKpis {
   const totalProjectValue = summaries.reduce((sum, s) => sum + s.budget, 0);
-  const outstandingBalance = summaries.reduce((sum, s) => sum + s.outstandingBalance, 0);
   const overallCompletion = projects.length
     ? Math.round(projects.reduce((sum, p) => sum + p.progress_percent, 0) / projects.length)
     : 0;
@@ -134,10 +131,8 @@ export function computeKpis(
   return {
     totalProjects: projects.length,
     totalProjectValue,
-    outstandingBalance,
     overallCompletion,
     pendingApprovals: milestones.filter((m) => m.status === "pending").length,
-    completedDeliverables: milestones.filter((m) => m.status === "completed").length,
   };
 }
 

@@ -5,6 +5,9 @@ import { ProjectsTable } from "@/components/dashboard/projects-table";
 import { TaskOverview } from "@/components/dashboard/task-overview";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
 import { QuickActions } from "@/components/dashboard/quick-actions";
+import Link from "next/link";
+import { Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   buildProjectSummaries,
   computeBillingChartData,
@@ -23,7 +26,7 @@ export default async function DashboardPage() {
   // dashboard renders or computes with (see DashboardProjectFields and the
   // Minimal* picks in lib/dashboard/compute.ts) instead of `*`.
   const [{ data: profile }, { data: projects }] = await Promise.all([
-    supabase.from("profiles").select("full_name, owner_name, company_name").eq("id", user!.id).single(),
+    supabase.from("profiles").select("full_name, owner_name, company_name, role").eq("id", user!.id).single(),
     supabase
       .from("projects")
       .select("id, title, status, priority, progress_percent, start_date, deadline, assigned_team, budget, description")
@@ -79,6 +82,17 @@ export default async function DashboardPage() {
       </div>
 
       <KpiCards kpis={kpis} />
+
+      {profile?.role === "admin" && (
+        <div className="flex justify-end">
+          <Button asChild>
+            <Link href="/admin/projects">
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit projects
+            </Link>
+          </Button>
+        </div>
+      )}
 
       <ProjectAnalytics summaries={summaries} taskOverview={taskOverview} timeline={timeline} billing={billing} />
 
