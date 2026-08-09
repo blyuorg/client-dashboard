@@ -46,6 +46,19 @@ A production-ready client portal built with Next.js 15, Supabase, and shadcn/ui.
    npx shadcn@latest add dialog dropdown-menu avatar badge separator sheet toast skeleton table tabs
    ```
 
+## Razorpay billing setup
+
+The billing flow is ready for Razorpay test mode or live mode. Add these server-only variables to `.env.local` and to your deployment provider's environment settings:
+
+```bash
+RAZORPAY_KEY_ID=rzp_test_...
+RAZORPAY_KEY_SECRET=...
+```
+
+Run the SQL files in `supabase/migrations/` for an existing Supabase database. Create invoices from **Admin → Invoices**. A client sees only their own invoices on `/billing`; selecting **Pay securely** opens Razorpay checkout. The server verifies Razorpay's signature before it writes a successful payment and changes the invoice to `paid`.
+
+Use test credentials first, then replace both values with live credentials when you are ready to accept real payments. Never commit the secret key or prefix it with `NEXT_PUBLIC_`.
+
 ## First admin user
 
 New signups default to `role = 'client'`. To make yourself an admin, run this in the Supabase SQL editor after registering:

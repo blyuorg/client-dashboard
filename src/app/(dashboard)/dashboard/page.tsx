@@ -1,9 +1,6 @@
 import { createClient, getUser } from "@/lib/supabase/server";
 import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { ProjectAnalytics } from "@/components/dashboard/project-analytics";
-import { ProjectsTable } from "@/components/dashboard/projects-table";
-import { TaskOverview } from "@/components/dashboard/task-overview";
-import { RecentActivity } from "@/components/dashboard/recent-activity";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import Link from "next/link";
 import { Pencil } from "lucide-react";
@@ -36,7 +33,7 @@ export default async function DashboardPage() {
 
   const projectIds = (projects ?? []).map((p) => p.id);
 
-  const [{ data: tasks }, { data: milestones }, { data: invoices }, { data: payments }, { data: activities }] =
+  const [{ data: tasks }, { data: milestones }, { data: invoices }, { data: payments }] =
     await Promise.all([
       projectIds.length
         ? supabase.from("tasks").select("project_id, status").in("project_id", projectIds)
@@ -49,14 +46,6 @@ export default async function DashboardPage() {
         : Promise.resolve({ data: [] }),
       supabase.from("invoices").select("id, project_id, status, total").eq("client_id", user!.id),
       supabase.from("payments").select("invoice_id, status, amount").eq("client_id", user!.id),
-      projectIds.length
-        ? supabase
-            .from("activities")
-            .select("id, action, created_at")
-            .in("project_id", projectIds)
-            .order("created_at", { ascending: false })
-            .limit(15)
-        : Promise.resolve({ data: [] }),
     ]);
 
   const summaries = buildProjectSummaries(
@@ -70,7 +59,6 @@ export default async function DashboardPage() {
   const taskOverview = computeTaskOverview(tasks ?? []);
   const timeline = computeProjectTimeline(projects ?? [], milestones ?? []);
   const billing = computeBillingChartData(summaries);
-  const clientName = profile?.company_name || profile?.full_name || profile?.owner_name || "You";
 
   return (
     <div className="space-y-6">
@@ -95,13 +83,6 @@ export default async function DashboardPage() {
       )}
 
       <ProjectAnalytics summaries={summaries} taskOverview={taskOverview} timeline={timeline} billing={billing} />
-
-      <ProjectsTable summaries={summaries} clientName={clientName} />
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <TaskOverview data={taskOverview} />
-        <RecentActivity activities={activities ?? []} />
-      </div>
 
       <QuickActions />
     </div>

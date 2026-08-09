@@ -56,7 +56,6 @@ export default async function ProjectPage() {
     <ProjectsPageClient
       summaries={summaries}
       clientName={clientName}
-      isAdmin={profile?.role === "admin"}
       milestones={milestones ?? []}
       activities={activities ?? []}
       approvals={approvals ?? []}

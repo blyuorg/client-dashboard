@@ -55,7 +55,7 @@ export function BillingKpiCards({ kpis }: { kpis?: BillingKpis | null }) {
                     <Icon className="h-5 w-5" />
                   </div>
                   <Badge variant="outline" className="text-muted-foreground">
-                    No data
+                    {kpis ? "Live" : "No data"}
                   </Badge>
                 </div>
                 <div className="space-y-1.5">
@@ -70,7 +70,7 @@ export function BillingKpiCards({ kpis }: { kpis?: BillingKpis | null }) {
                   <p className="text-xs text-muted-foreground/80">
                     {kpis && item.key === "nextInvoiceAmount"
                       ? `Due ${formatDate(kpis.nextInvoiceDueDate)}`
-                      : "Will populate once billing data is available"}
+                      : kpis ? "From your invoice records" : "Will populate once billing data is available"}
                   </p>
                 </div>
               </CardContent>

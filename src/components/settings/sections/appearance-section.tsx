@@ -18,7 +18,7 @@ const ACCENTS = [
 ];
 
 export function AppearanceSection() {
-  const [theme, setTheme] = useState<"dark" | "light" | "system">("dark");
+  const [theme, setTheme] = useState<"dark" | "light" | "system">("light");
   const [accent, setAccent] = useState("blue");
   const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
   const [fontSize, setFontSize] = useState<"small" | "medium" | "large">("medium");

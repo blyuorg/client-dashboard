@@ -6,6 +6,7 @@ import { InvoiceStatusBadge } from "@/components/billing/invoice-status-badge";
 import { EmptyState } from "@/components/billing/empty-state";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Invoice } from "@/lib/dashboard/billing-types";
+import { PayInvoiceButton } from "./pay-invoice-button";
 
 export function InvoiceHistoryTable({ invoices = [] }: { invoices?: Invoice[] }) {
   return (
@@ -40,7 +41,7 @@ export function InvoiceHistoryTable({ invoices = [] }: { invoices?: Invoice[] })
             ) : (
               invoices.map((invoice) => (
                 <TableRow key={invoice.id} className="group">
-                  <TableCell className="pl-6 font-medium">{invoice.id}</TableCell>
+                  <TableCell className="pl-6 font-medium">{invoice.invoiceNumber ?? invoice.id}</TableCell>
                   <TableCell className="text-muted-foreground">{invoice.project}</TableCell>
                   <TableCell className="text-muted-foreground">{formatDate(invoice.dueDate)}</TableCell>
                   <TableCell className="font-medium">{formatCurrency(invoice.amount)}</TableCell>
@@ -49,11 +50,9 @@ export function InvoiceHistoryTable({ invoices = [] }: { invoices?: Invoice[] })
                   </TableCell>
                   <TableCell className="pr-6">
                     <div className="flex items-center justify-end gap-1 opacity-70 transition-opacity group-hover:opacity-100">
+                      {(invoice.status === "pending" || invoice.status === "overdue") && <PayInvoiceButton invoiceId={invoice.id} invoiceNumber={invoice.invoiceNumber ?? invoice.id} />}
                       <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`View ${invoice.id}`}>
                         <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Download ${invoice.id}`}>
-                        <Download className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>

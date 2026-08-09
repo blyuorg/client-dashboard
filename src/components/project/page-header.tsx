@@ -1,7 +1,6 @@
 "use client";
 
-import { LayoutGrid, List, Plus, Search, ArrowUpDown } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { LayoutGrid, List, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,21 +19,15 @@ const SORT_LABELS: Record<ProjectSortKey, string> = {
 };
 
 export function ProjectPageHeader({
-  search,
-  onSearchChange,
   sort,
   onSortChange,
   view,
   onViewChange,
-  isAdmin,
 }: {
-  search: string;
-  onSearchChange: (value: string) => void;
   sort: ProjectSortKey;
   onSortChange: (value: ProjectSortKey) => void;
   view: "table" | "cards";
   onViewChange: (value: "table" | "cards") => void;
-  isAdmin: boolean;
 }) {
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -44,16 +37,6 @@ export function ProjectPageHeader({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search projects..."
-            className="w-52 rounded-full pl-9"
-          />
-        </div>
-
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1.5 rounded-full">
@@ -95,12 +78,6 @@ export function ProjectPageHeader({
           </button>
         </div>
 
-        {isAdmin && (
-          <Button size="sm" className="gap-1.5 rounded-full" disabled title="Coming soon">
-            <Plus className="h-3.5 w-3.5" />
-            New Project
-          </Button>
-        )}
       </div>
     </div>
   );

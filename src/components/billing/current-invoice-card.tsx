@@ -5,6 +5,7 @@ import { InvoiceStatusBadge } from "@/components/billing/invoice-status-badge";
 import { EmptyState } from "@/components/billing/empty-state";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { CurrentInvoice } from "@/lib/dashboard/billing-types";
+import { PayInvoiceButton } from "./pay-invoice-button";
 
 export function CurrentInvoiceCard({ invoice }: { invoice?: CurrentInvoice | null }) {
   return (
@@ -34,10 +35,7 @@ export function CurrentInvoiceCard({ invoice }: { invoice?: CurrentInvoice | nul
                 <Eye className="h-3.5 w-3.5" />
                 View Invoice
               </Button>
-              <Button size="sm" className="gap-1.5">
-                <Download className="h-3.5 w-3.5" />
-                Download PDF
-              </Button>
+              {invoice.status === "pending" || invoice.status === "overdue" ? <PayInvoiceButton invoiceId={invoice.id} invoiceNumber={invoice.invoiceNumber} /> : <Button size="sm" className="gap-1.5" disabled><Download className="h-3.5 w-3.5" />Download PDF</Button>}
             </div>
           </div>
         </CardContent>

@@ -7,14 +7,13 @@ import { ProjectsTableView } from "./projects-table-view";
 import { ProjectsCardView } from "./projects-card-view";
 import { ProjectDrawer } from "./project-drawer";
 import { ProjectsEmptyState, NoResultsState } from "./empty-state";
-import { filterSummaries, searchSummaries, sortSummaries, type ProjectFilterKey, type ProjectSortKey } from "@/lib/project/compute";
+import { filterSummaries, sortSummaries, type ProjectFilterKey, type ProjectSortKey } from "@/lib/project/compute";
 import type { ProjectSummary } from "@/lib/dashboard/compute";
 import type { Activity, Document, Invoice, Meeting, Message, Milestone, ProjectApproval } from "@/types/database";
 
 export function ProjectsPageClient({
   summaries,
   clientName,
-  isAdmin,
   milestones,
   activities,
   approvals,
@@ -25,7 +24,6 @@ export function ProjectsPageClient({
 }: {
   summaries: ProjectSummary[];
   clientName: string;
-  isAdmin: boolean;
   milestones: Milestone[];
   activities: Activity[];
   approvals: ProjectApproval[];
@@ -34,7 +32,6 @@ export function ProjectsPageClient({
   meetings: Meeting[];
   invoices: Invoice[];
 }) {
-  const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<ProjectFilterKey>("all");
   const [sort, setSort] = useState<ProjectSortKey>("updated");
   const [view, setView] = useState<"table" | "cards">("table");
@@ -58,9 +55,8 @@ export function ProjectsPageClient({
 
   const visible = useMemo(() => {
     const filtered = filterSummaries(summaries, filter);
-    const searched = searchSummaries(filtered, search);
-    return sortSummaries(searched, sort);
-  }, [summaries, filter, search, sort]);
+    return sortSummaries(filtered, sort);
+  }, [summaries, filter, sort]);
 
   const selected = summaries.find((s) => s.project.id === selectedId) ?? null;
 
@@ -68,13 +64,10 @@ export function ProjectsPageClient({
     return (
       <div className="space-y-6">
         <ProjectPageHeader
-          search={search}
-          onSearchChange={setSearch}
           sort={sort}
           onSortChange={setSort}
           view={view}
           onViewChange={setView}
-          isAdmin={isAdmin}
         />
         <ProjectsEmptyState />
       </div>
@@ -84,13 +77,10 @@ export function ProjectsPageClient({
   return (
     <div className="space-y-6">
       <ProjectPageHeader
-        search={search}
-        onSearchChange={setSearch}
         sort={sort}
         onSortChange={setSort}
         view={view}
         onViewChange={setView}
-        isAdmin={isAdmin}
       />
 
       <FilterChips active={filter} onChange={setFilter} counts={counts} />

@@ -1,44 +1,23 @@
+import { createClient, getUser } from "@/lib/supabase/server";
 import { BillingKpiCards } from "@/components/billing/billing-kpi-cards";
 import { PaymentProgressCard } from "@/components/billing/payment-progress-card";
 import { CurrentInvoiceCard } from "@/components/billing/current-invoice-card";
 import { InvoiceHistoryTable } from "@/components/billing/invoice-history-table";
-import { PaymentMethods } from "@/components/billing/payment-methods";
-import { DownloadCenter } from "@/components/billing/download-center";
 import { BillingSummaryCard } from "@/components/billing/billing-summary-card";
-import { UpcomingPayments } from "@/components/billing/upcoming-payments";
-import { PaymentTimeline } from "@/components/billing/payment-timeline";
 import { BillingAddressCard } from "@/components/billing/billing-address-card";
-import { BillingSupportCard } from "@/components/billing/billing-support-card";
 
-export default function BillingPage() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-3xl">Billing</h1>
-        <p className="text-sm text-muted-foreground">
-          Your financial relationship with Blyu — contracts, invoices, and payments in one place.
-        </p>
-      </div>
-
-      <BillingKpiCards />
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          <PaymentProgressCard />
-          <CurrentInvoiceCard />
-          <InvoiceHistoryTable />
-          <PaymentMethods />
-          <DownloadCenter />
-        </div>
-
-        <div className="space-y-6">
-          <BillingSummaryCard />
-          <UpcomingPayments />
-          <PaymentTimeline />
-          <BillingAddressCard />
-          <BillingSupportCard />
-        </div>
-      </div>
-    </div>
-  );
+export default async function BillingPage() {
+  const user = await getUser(); const supabase = await createClient();
+  const [{ data: invoices }, { data: projects }, { data: profile }, { data: payments }] = await Promise.all([
+    supabase.from("invoices").select("*").eq("client_id", user!.id).order("invoice_date", { ascending: false }),
+    supabase.from("projects").select("id, title, budget").eq("client_id", user!.id),
+    supabase.from("profiles").select("company_name, owner_name, full_name, email, phone, address, gst_number").eq("id", user!.id).single(),
+    supabase.from("payments").select("amount, status").eq("client_id", user!.id),
+  ]);
+  const projectTitles = new Map((projects ?? []).map(p => [p.id, p.title]));
+  const records = (invoices ?? []).map(i => ({ id: i.id, project: projectTitles.get(i.project_id) ?? "Project", dueDate: i.due_date ?? i.invoice_date, amount: Number(i.total), status: i.status === "cancelled" ? "draft" : i.status, invoiceNumber: i.invoice_number }));
+  const payable = records.filter(i => i.status === "pending" || i.status === "overdue"); const current = payable[0] ?? records.find(i => i.status === "draft") ?? null;
+  const totalContractValue = (projects ?? []).reduce((sum, p) => sum + Number(p.budget ?? 0), 0); const paid = (payments ?? []).filter(p => p.status === "success").reduce((sum, p) => sum + Number(p.amount), 0);
+  const outstanding = payable.reduce((sum, i) => sum + i.amount, 0);
+  return <div className="space-y-6"><div><h1 className="font-display text-3xl">Billing</h1><p className="text-sm text-muted-foreground">Invoices are managed by your administrator and paid securely through Razorpay.</p></div><BillingKpiCards kpis={{ totalContractValue, amountPaid: paid, amountPaidPercent: totalContractValue ? Math.round(paid / totalContractValue * 100) : 0, outstandingBalance: outstanding, outstandingInvoiceCount: payable.length, nextInvoiceAmount: current?.amount ?? 0, nextInvoiceDueDate: current?.dueDate ?? new Date().toISOString() }} /><div className="grid gap-6 lg:grid-cols-3"><div className="space-y-6 lg:col-span-2"><PaymentProgressCard progress={totalContractValue ? { paidAmount: paid, totalAmount: totalContractValue, percent: Math.min(100, Math.round(paid / totalContractValue * 100)) } : null} /><CurrentInvoiceCard invoice={current} /><InvoiceHistoryTable invoices={records} /></div><div className="space-y-6"><BillingSummaryCard summary={current ? { subtotal: current.amount, discount: 0, tax: 0, additionalCharges: 0, grandTotal: current.amount } : null} /><BillingAddressCard address={profile ? { companyName: profile.company_name ?? "", contactPerson: profile.owner_name || profile.full_name || "", email: profile.email, phone: profile.phone ?? "", gstNumber: profile.gst_number ?? "", address: profile.address ?? "" } : null} /></div></div></div>;
 }

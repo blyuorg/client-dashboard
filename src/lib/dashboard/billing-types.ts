@@ -6,6 +6,7 @@ export type InvoiceStatus = "paid" | "pending" | "overdue" | "draft";
 
 export type Invoice = {
   id: string;
+  invoiceNumber?: string;
   project: string;
   dueDate: string;
   amount: number;
