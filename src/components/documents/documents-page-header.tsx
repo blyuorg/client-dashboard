@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutGrid, List, Plus, Search, X, ArrowUpDown, SlidersHorizontal } from "lucide-react";
+import { LayoutGrid, List, Plus, Search, X, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,8 +28,8 @@ export function DocumentsPageHeader({
   onSortChange,
   view,
   onViewChange,
-  filtersOpen,
-  onToggleFilters,
+  isAdmin,
+  onUpload,
 }: {
   search: string;
   onSearchChange: (value: string) => void;
@@ -37,15 +37,15 @@ export function DocumentsPageHeader({
   onSortChange: (value: DocumentSortKey) => void;
   view: DocumentsView;
   onViewChange: (value: DocumentsView) => void;
-  filtersOpen: boolean;
-  onToggleFilters: () => void;
+  isAdmin: boolean;
+  onUpload: () => void;
 }) {
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div>
         <h1 className="font-display text-3xl">Documents</h1>
         <p className="text-sm text-muted-foreground">
-          Securely organize, manage, preview, and access all project documents from one place.
+          Access and download all project documents from one place.
         </p>
       </div>
 
@@ -73,17 +73,6 @@ export function DocumentsPageHeader({
             </kbd>
           )}
         </div>
-
-        <Button
-          variant={filtersOpen ? "secondary" : "outline"}
-          size="sm"
-          className="gap-1.5 rounded-full"
-          onClick={onToggleFilters}
-          aria-pressed={filtersOpen}
-        >
-          <SlidersHorizontal className="h-3.5 w-3.5" />
-          Filter
-        </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -128,10 +117,12 @@ export function DocumentsPageHeader({
           </button>
         </div>
 
-        <Button size="sm" className="gap-1.5 rounded-full" disabled title="Coming soon">
-          <Plus className="h-3.5 w-3.5" />
-          Upload
-        </Button>
+        {isAdmin && (
+          <Button size="sm" className="gap-1.5 rounded-full" onClick={onUpload}>
+            <Plus className="h-3.5 w-3.5" />
+            Upload
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -9,15 +9,10 @@ export type DocumentRecord = {
   fileName: string;
   fileType: string;
   fileSize: number;
-  category: string;
+  projectId: string | null;
   project: string;
-  version: string;
   uploadedAt: string;
-  modifiedAt: string;
-  uploadedBy: string;
-  status: DocumentStatus;
-  folderId: string;
-  isShared: boolean;
+  storagePath: string;
 };
 
 export type DocumentVersion = {

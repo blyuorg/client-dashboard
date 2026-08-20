@@ -27,9 +27,14 @@ export async function decideApproval(
   return { error: null };
 }
 
-export async function getDocumentDownloadUrl(storagePath: string): Promise<{ url: string | null; error: string | null }> {
+export async function getDocumentDownloadUrl(
+  storagePath: string,
+  fileName?: string
+): Promise<{ url: string | null; error: string | null }> {
   const supabase = await createClient();
-  const { data, error } = await supabase.storage.from("documents").createSignedUrl(storagePath, 60);
+  const { data, error } = await supabase.storage
+    .from("documents")
+    .createSignedUrl(storagePath, 60, { download: fileName ?? true });
 
   if (error) return { url: null, error: getReadableErrorMessage(error) };
   return { url: data.signedUrl, error: null };
