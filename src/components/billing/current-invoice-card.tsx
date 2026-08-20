@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Eye, Download, Receipt } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,11 +32,22 @@ export function CurrentInvoiceCard({ invoice }: { invoice?: CurrentInvoice | nul
           <div className="flex flex-col items-start gap-4 sm:items-end">
             <p className="text-3xl font-semibold tracking-tight">{formatCurrency(invoice.amount)}</p>
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" className="gap-1.5">
-                <Eye className="h-3.5 w-3.5" />
-                View Invoice
+              <Button size="sm" variant="outline" className="gap-1.5" asChild>
+                <Link href={`/billing/${invoice.id}`}>
+                  <Eye className="h-3.5 w-3.5" />
+                  View Invoice
+                </Link>
               </Button>
-              {invoice.status === "pending" || invoice.status === "overdue" ? <PayInvoiceButton invoiceId={invoice.id} invoiceNumber={invoice.invoiceNumber} /> : <Button size="sm" className="gap-1.5" disabled><Download className="h-3.5 w-3.5" />Download PDF</Button>}
+              {invoice.status === "pending" || invoice.status === "overdue" ? (
+                <PayInvoiceButton invoiceId={invoice.id} invoiceNumber={invoice.invoiceNumber} />
+              ) : (
+                <Button size="sm" className="gap-1.5" asChild>
+                  <a href={`/api/invoices/${invoice.id}/pdf`} target="_blank" rel="noreferrer">
+                    <Download className="h-3.5 w-3.5" />
+                    Download PDF
+                  </a>
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>

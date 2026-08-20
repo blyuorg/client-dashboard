@@ -1,13 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { Check } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
+import { Check, Loader2 } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { PillGroup } from "@/components/settings/pill-group";
 import { SettingToggleRow } from "@/components/settings/setting-toggle-row";
 import { Sparkles, Waves } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSettingsToast } from "@/components/settings/settings-toast-provider";
+import { savePreferences } from "@/lib/settings/actions";
+import type { AppearancePreferences } from "@/lib/settings/types";
+import type { Profile } from "@/types/database";
 
 const ACCENTS = [
   { key: "blue", className: "bg-[hsl(217,100%,65%)]" },
@@ -17,13 +23,37 @@ const ACCENTS = [
   { key: "rose", className: "bg-rose-500" },
 ];
 
-export function AppearanceSection() {
-  const [theme, setTheme] = useState<"dark" | "light" | "system">("light");
-  const [accent, setAccent] = useState("blue");
-  const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
-  const [fontSize, setFontSize] = useState<"small" | "medium" | "large">("medium");
-  const [enableAnimations, setEnableAnimations] = useState(true);
-  const [reduceMotion, setReduceMotion] = useState(false);
+export function AppearanceSection({ profile }: { profile: Profile }) {
+  const showToast = useSettingsToast();
+  const saved = profile.preferences?.appearance as AppearancePreferences | undefined;
+  const { theme, setTheme } = useTheme();
+
+  const [accent, setAccent] = useState(saved?.accent ?? "blue");
+  const [density, setDensity] = useState<"comfortable" | "compact">(saved?.density ?? "comfortable");
+  const [fontSize, setFontSize] = useState<"small" | "medium" | "large">(saved?.fontSize ?? "medium");
+  const [enableAnimations, setEnableAnimations] = useState(saved?.enableAnimations ?? true);
+  const [reduceMotion, setReduceMotion] = useState(saved?.reduceMotion ?? false);
+  const [saving, setSaving] = useState(false);
+
+  // Apply the saved reduce-motion preference on load, independent of Save —
+  // it's a real, sitewide effect (see globals.css), not just stored state.
+  useEffect(() => {
+    document.documentElement.setAttribute("data-reduce-motion", String(reduceMotion));
+  }, [reduceMotion]);
+
+  async function handleSave() {
+    setSaving(true);
+    const { error } = await savePreferences("appearance", {
+      theme: (theme as AppearancePreferences["theme"]) ?? "system",
+      accent,
+      density,
+      fontSize,
+      enableAnimations,
+      reduceMotion,
+    });
+    setSaving(false);
+    showToast(error ? "Couldn't save changes" : "Appearance preferences saved", error ?? undefined);
+  }
 
   return (
     <SettingsSection id="appearance" title="Appearance" description="Personalize how the Blyu portal looks and feels.">
@@ -34,7 +64,7 @@ export function AppearanceSection() {
         </CardHeader>
         <CardContent>
           <PillGroup
-            value={theme}
+            value={(theme as "dark" | "light" | "system") ?? "system"}
             onChange={setTheme}
             options={[
               { value: "dark", label: "Dark" },
@@ -108,7 +138,7 @@ export function AppearanceSection() {
           <SettingToggleRow
             icon={Waves}
             label="Reduce Motion"
-            description="Minimize movement for accessibility"
+            description="Minimize movement across the whole portal, right now"
             checked={reduceMotion}
             onCheckedChange={setReduceMotion}
           />
@@ -131,6 +161,12 @@ export function AppearanceSection() {
             ]}
           />
         </CardContent>
+        <CardFooter className="justify-end border-t border-border pt-6">
+          <Button onClick={handleSave} disabled={saving}>
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Changes
+          </Button>
+        </CardFooter>
       </Card>
     </SettingsSection>
   );

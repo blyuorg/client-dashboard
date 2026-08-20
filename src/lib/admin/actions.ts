@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getReadableErrorMessage } from "@/lib/supabase/errors";
-import type { BusinessType, InvoiceStatus, ProjectPriority, ProjectStatus } from "@/types/database";
+import type { BusinessType, ProjectPriority, ProjectStatus } from "@/types/database";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -89,29 +89,6 @@ export async function updateProject(
   return { error: null };
 }
 
-export type InvoiceInput = {
-  project_id: string;
-  invoice_number: string;
-  invoice_date: string;
-  due_date?: string | null;
-  subtotal: number;
-  gst: number;
-  discount: number;
-  tax: number;
-  total: number;
-  status: InvoiceStatus;
-};
-
-export async function saveInvoice(invoiceId: string | null, input: InvoiceInput): Promise<{ error: string | null }> {
-  const { supabase, error: authError } = await requireAdmin();
-  if (authError) return { error: authError };
-  const { data: project } = await supabase.from("projects").select("client_id").eq("id", input.project_id).single();
-  if (!project) return { error: "Choose a valid project." };
-  const payload = { ...input, client_id: project.client_id };
-  const { error } = invoiceId
-    ? await supabase.from("invoices").update(payload).eq("id", invoiceId)
-    : await supabase.from("invoices").insert(payload);
-  if (error) return { error: getReadableErrorMessage(error) };
-  revalidatePath("/admin/invoices"); revalidatePath("/billing"); revalidatePath("/dashboard");
-  return { error: null };
-}
+// Invoice create/update/send now lives in @/lib/invoices/actions — it needs
+// to compute line items + GST totals server-side, which this file's plain
+// ProjectInput-style actions don't model.

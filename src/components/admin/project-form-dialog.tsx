@@ -74,6 +74,9 @@ export function ProjectFormDialog({
       ...values,
       progress_percent: Number(values.progress_percent) || 0,
       budget: values.budget ? Number(values.budget) : null,
+      start_date: values.start_date || null,
+      deadline: values.deadline || null,
+      estimated_completion: values.estimated_completion || null,
     };
 
     const { error } = isEditing

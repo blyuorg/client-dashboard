@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Download, LogOut, Trash2, type LucideIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { AlertTriangle, Download, LogOut, Trash2, Loader2, type LucideIcon } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,9 +15,11 @@ import {
 } from "@/components/ui/dialog";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { useSettingsToast } from "@/components/settings/settings-toast-provider";
+import { exportAccountData, deleteOwnAccount } from "@/lib/settings/actions";
+import { signOut } from "@/lib/supabase/auth";
 
 type DangerAction = {
-  key: string;
+  key: "export" | "logout" | "delete";
   icon: LucideIcon;
   title: string;
   description: string;
@@ -52,13 +55,56 @@ const ACTIONS: DangerAction[] = [
 ];
 
 export function DangerZoneSection() {
-  const [openAction, setOpenAction] = useState<DangerAction | null>(null);
+  const router = useRouter();
   const showToast = useSettingsToast();
+  const [openAction, setOpenAction] = useState<DangerAction | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  function handleConfirm() {
+  async function handleConfirm() {
     if (!openAction) return;
+    setBusy(true);
+
+    if (openAction.key === "export") {
+      const { data, error } = await exportAccountData();
+      setBusy(false);
+      setOpenAction(null);
+      if (error || !data) return showToast("Couldn't export your data", error ?? undefined);
+
+      const blob = new Blob([data], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `blyu-account-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      showToast("Export ready", "Your download should start automatically.");
+      return;
+    }
+
+    if (openAction.key === "logout") {
+      const { error } = await signOut();
+      setBusy(false);
+      setOpenAction(null);
+      if (error) return showToast("Couldn't log out", error);
+      router.push("/login");
+      router.refresh();
+      return;
+    }
+
+    // delete
+    const { error } = await deleteOwnAccount();
+    if (error) {
+      setBusy(false);
+      setOpenAction(null);
+      return showToast("Couldn't delete your account", error);
+    }
+    await signOut();
+    setBusy(false);
     setOpenAction(null);
-    showToast("This is a UI preview", `${openAction.title} isn't connected to a backend yet.`);
+    router.push("/login");
+    router.refresh();
   }
 
   return (
@@ -96,17 +142,18 @@ export function DangerZoneSection() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!openAction} onOpenChange={(open) => !open && setOpenAction(null)}>
+      <Dialog open={!!openAction} onOpenChange={(open) => !open && !busy && setOpenAction(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Confirm: {openAction?.title}</DialogTitle>
             <DialogDescription>{openAction?.confirmDescription}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpenAction(null)}>
+            <Button variant="ghost" onClick={() => setOpenAction(null)} disabled={busy}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleConfirm}>
+            <Button variant="destructive" onClick={handleConfirm} disabled={busy}>
+              {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Yes, {openAction?.actionLabel}
             </Button>
           </DialogFooter>

@@ -9,11 +9,17 @@ import {
   MessageSquareText,
   Megaphone,
   BarChart3,
+  Loader2,
   type LucideIcon,
 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { SettingToggleRow } from "@/components/settings/setting-toggle-row";
+import { useSettingsToast } from "@/components/settings/settings-toast-provider";
+import { savePreferences } from "@/lib/settings/actions";
+import type { PrivacyPreferences } from "@/lib/settings/types";
+import type { Profile } from "@/types/database";
 
 type ToggleItem = { key: string; label: string; icon: LucideIcon; defaultOn: boolean };
 
@@ -27,10 +33,20 @@ const ITEMS: ToggleItem[] = [
   { key: "analytics", label: "Share Anonymous Analytics", icon: BarChart3, defaultOn: true },
 ];
 
-export function PrivacySection() {
-  const [state, setState] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(ITEMS.map((i) => [i.key, i.defaultOn]))
+export function PrivacySection({ profile }: { profile: Profile }) {
+  const showToast = useSettingsToast();
+  const saved = profile.preferences?.privacy as PrivacyPreferences | undefined;
+  const [state, setState] = useState<Record<string, boolean>>(
+    saved ?? Object.fromEntries(ITEMS.map((i) => [i.key, i.defaultOn]))
   );
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    setSaving(true);
+    const { error } = await savePreferences("privacy", state);
+    setSaving(false);
+    showToast(error ? "Couldn't save changes" : "Privacy preferences saved", error ?? undefined);
+  }
 
   return (
     <SettingsSection id="privacy" title="Privacy" description="Control what others can see and how you can be reached.">
@@ -50,6 +66,12 @@ export function PrivacySection() {
             />
           ))}
         </CardContent>
+        <CardFooter className="justify-end border-t border-border pt-6">
+          <Button onClick={handleSave} disabled={saving}>
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Changes
+          </Button>
+        </CardFooter>
       </Card>
     </SettingsSection>
   );

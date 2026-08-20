@@ -14,11 +14,13 @@ export type ProjectPriority = "low" | "medium" | "high" | "urgent";
 export type TaskStatus = "pending" | "in_progress" | "completed" | "delayed" | "cancelled" | "blocked";
 export type MilestoneStatus = "pending" | "in_progress" | "completed";
 export type InvoiceStatus = "draft" | "pending" | "paid" | "overdue" | "cancelled";
+export type GstType = "none" | "cgst_sgst" | "igst";
 export type PaymentMethod = "bank_transfer" | "card" | "upi" | "cash" | "other";
 export type PaymentStatus = "pending" | "success" | "failed" | "refunded";
 export type ApprovalStatus = "pending" | "approved" | "changes_requested";
 export type DocumentFolder = "contracts" | "invoices" | "design_files" | "requirements" | "reports" | "others";
 export type BusinessType = "individual" | "startup" | "sme" | "enterprise" | "other";
+export type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
 
 export type Profile = {
   id: string;
@@ -35,6 +37,18 @@ export type Profile = {
   avatar_url: string | null;
   preferred_communication: string | null;
   notes: string | null;
+  preferences: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SupportTicket = {
+  id: string;
+  client_id: string;
+  project_id: string | null;
+  subject: string;
+  description: string | null;
+  status: TicketStatus;
   created_at: string;
   updated_at: string;
 };
@@ -103,8 +117,30 @@ export type Invoice = {
   total: number;
   status: InvoiceStatus;
   pdf_storage_path: string | null;
+  currency: string;
+  notes: string | null;
+  terms: string | null;
+  gst_percent: number;
+  gst_type: GstType;
+  cgst_amount: number;
+  sgst_amount: number;
+  igst_amount: number;
+  sent_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type InvoiceLineItem = {
+  id: string;
+  invoice_id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  discount_percent: number;
+  taxable_amount: number;
+  line_total: number;
+  order_index: number;
+  created_at: string;
 };
 
 export type Payment = {
@@ -164,6 +200,25 @@ export type Message = {
   created_at: string;
 };
 
+export type NotificationType =
+  | "project_updated"
+  | "invoice_generated"
+  | "task_completed"
+  | "meeting_scheduled"
+  | "new_message"
+  | "payment_received";
+
+export type Notification = {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  reference_id: string | null;
+  is_read: boolean;
+  created_at: string;
+};
+
 export type Meeting = {
   id: string;
   project_id: string | null;
@@ -212,6 +267,12 @@ export type Database = {
         Update: Partial<Invoice>;
         Relationships: [];
       };
+      invoice_line_items: {
+        Row: InvoiceLineItem;
+        Insert: Partial<InvoiceLineItem>;
+        Update: Partial<InvoiceLineItem>;
+        Relationships: [];
+      };
       payments: {
         Row: Payment;
         Insert: Partial<Payment>;
@@ -246,6 +307,18 @@ export type Database = {
         Row: Meeting;
         Insert: Partial<Meeting>;
         Update: Partial<Meeting>;
+        Relationships: [];
+      };
+      support_tickets: {
+        Row: SupportTicket;
+        Insert: Partial<SupportTicket>;
+        Update: Partial<SupportTicket>;
+        Relationships: [];
+      };
+      notifications: {
+        Row: Notification;
+        Insert: Partial<Notification>;
+        Update: Partial<Notification>;
         Relationships: [];
       };
     };

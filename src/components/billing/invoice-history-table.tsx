@@ -1,4 +1,5 @@
-import { Download, Eye, FileStack } from "lucide-react";
+import Link from "next/link";
+import { Eye, FileStack } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -51,8 +52,10 @@ export function InvoiceHistoryTable({ invoices = [] }: { invoices?: Invoice[] })
                   <TableCell className="pr-6">
                     <div className="flex items-center justify-end gap-1 opacity-70 transition-opacity group-hover:opacity-100">
                       {(invoice.status === "pending" || invoice.status === "overdue") && <PayInvoiceButton invoiceId={invoice.id} invoiceNumber={invoice.invoiceNumber ?? invoice.id} />}
-                      <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`View ${invoice.id}`}>
-                        <Eye className="h-4 w-4" />
+                      <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`View ${invoice.id}`} asChild>
+                        <Link href={`/billing/${invoice.id}`}>
+                          <Eye className="h-4 w-4" />
+                        </Link>
                       </Button>
                     </div>
                   </TableCell>

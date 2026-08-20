@@ -19,8 +19,9 @@ import { HelpSection } from "@/components/settings/sections/help-section";
 import { AboutSection } from "@/components/settings/sections/about-section";
 import { DangerZoneSection } from "@/components/settings/sections/danger-zone-section";
 import type { SettingsSectionId } from "@/lib/settings/types";
+import type { Profile } from "@/types/database";
 
-export function SettingsPageClient() {
+export function SettingsPageClient({ profile }: { profile: Profile }) {
   const [search, setSearch] = useState("");
   const [active, setActive] = useState<SettingsSectionId>("general");
   const [navOpen, setNavOpen] = useState(false);
@@ -95,13 +96,13 @@ export function SettingsPageClient() {
           </div>
 
           <div className="min-w-0 flex-1 space-y-10">
-            <GeneralSection />
-            <NotificationsSection />
-            <AppearanceSection />
-            <SecuritySection />
-            <PrivacySection />
-            <LanguageSection />
-            <MeetingsSection />
+            <GeneralSection profile={profile} />
+            <NotificationsSection profile={profile} />
+            <AppearanceSection profile={profile} />
+            <SecuritySection profile={profile} />
+            <PrivacySection profile={profile} />
+            <LanguageSection profile={profile} />
+            <MeetingsSection profile={profile} />
             <HelpSection />
             <AboutSection />
             <DangerZoneSection />

@@ -1,9 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { SelectField } from "@/components/settings/select-field";
+import { useSettingsToast } from "@/components/settings/settings-toast-provider";
+import { savePreferences } from "@/lib/settings/actions";
+import type { LanguagePreferences } from "@/lib/settings/types";
+import type { Profile } from "@/types/database";
 
 const LANGUAGES = ["English", "Hindi", "Spanish", "French", "German", "Arabic"];
 const TIMEZONES = [
@@ -18,12 +24,23 @@ const DATE_FORMATS = ["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"];
 const TIME_FORMATS = ["12-hour", "24-hour"];
 const CURRENCIES = ["INR (₹)", "USD ($)", "EUR (€)", "GBP (£)", "AED (د.إ)"];
 
-export function LanguageSection() {
-  const [language, setLanguage] = useState(LANGUAGES[0]);
-  const [timezone, setTimezone] = useState(TIMEZONES[0]);
-  const [dateFormat, setDateFormat] = useState(DATE_FORMATS[0]);
-  const [timeFormat, setTimeFormat] = useState(TIME_FORMATS[0]);
-  const [currency, setCurrency] = useState(CURRENCIES[0]);
+export function LanguageSection({ profile }: { profile: Profile }) {
+  const showToast = useSettingsToast();
+  const saved = profile.preferences?.language as LanguagePreferences | undefined;
+
+  const [language, setLanguage] = useState(saved?.language ?? LANGUAGES[0]);
+  const [timezone, setTimezone] = useState(saved?.timezone ?? TIMEZONES[0]);
+  const [dateFormat, setDateFormat] = useState(saved?.dateFormat ?? DATE_FORMATS[0]);
+  const [timeFormat, setTimeFormat] = useState(saved?.timeFormat ?? TIME_FORMATS[0]);
+  const [currency, setCurrency] = useState(saved?.currency ?? CURRENCIES[0]);
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    setSaving(true);
+    const { error } = await savePreferences("language", { language, timezone, dateFormat, timeFormat, currency });
+    setSaving(false);
+    showToast(error ? "Couldn't save changes" : "Regional preferences saved", error ?? undefined);
+  }
 
   return (
     <SettingsSection id="language" title="Language & Region" description="Set your language, timezone, and regional formats.">
@@ -39,6 +56,12 @@ export function LanguageSection() {
           <SelectField label="Time Format" value={timeFormat} onChange={setTimeFormat} options={TIME_FORMATS} />
           <SelectField label="Currency Display" value={currency} onChange={setCurrency} options={CURRENCIES} />
         </CardContent>
+        <CardFooter className="justify-end border-t border-border pt-6">
+          <Button onClick={handleSave} disabled={saving}>
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Changes
+          </Button>
+        </CardFooter>
       </Card>
     </SettingsSection>
   );
