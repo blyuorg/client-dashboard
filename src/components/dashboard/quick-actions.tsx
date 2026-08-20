@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { UploadCloud, Eye, CreditCard, MessageSquare, CalendarPlus, LifeBuoy, type LucideIcon } from "lucide-react";
+import { UploadCloud, Eye, CreditCard, CalendarPlus, LifeBuoy, type LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -13,7 +13,6 @@ const actions: Action[] = [
   { label: "Upload Assets", icon: UploadCloud, href: "/documents" },
   { label: "Review Designs", icon: Eye, href: "/documents" },
   { label: "Pay Invoice", icon: CreditCard, href: "/billing" },
-  { label: "Message Team", icon: MessageSquare, href: "/messages" },
   { label: "Book Meeting", icon: CalendarPlus },
   { label: "Create Support Request", icon: LifeBuoy },
 ];

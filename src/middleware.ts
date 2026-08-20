@@ -26,7 +26,6 @@ export const config = {
     "/project/:path*",
     "/billing/:path*",
     "/documents/:path*",
-    "/messages/:path*",
     "/notifications/:path*",
     "/profile/:path*",
     "/settings/:path*",
