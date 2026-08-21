@@ -7,7 +7,6 @@ import { SettingsSection } from "@/components/settings/settings-section";
 import { SettingToggleRow } from "@/components/settings/setting-toggle-row";
 import { useSettingsToast } from "@/components/settings/settings-toast-provider";
 import { savePreferences } from "@/lib/settings/actions";
-import { setPresenceEnabled } from "@/lib/presence/presence-provider";
 import type { PrivacyPreferences } from "@/lib/settings/types";
 import type { Profile } from "@/types/database";
 
@@ -19,15 +18,10 @@ export function PrivacySection({ profile }: { profile: Profile }) {
 
   async function handleChange(next: boolean) {
     setShowOnlineStatus(next);
-    setPresenceEnabled(next);
     setSaving(true);
     const { error } = await savePreferences("privacy", { showOnlineStatus: next });
     setSaving(false);
-    if (error) {
-      // Revert both the UI and the live presence channel if the save failed.
-      setShowOnlineStatus(!next);
-      setPresenceEnabled(!next);
-    }
+    if (error) setShowOnlineStatus(!next);
     showToast(error ? "Couldn't save changes" : "Privacy preferences saved", error ?? undefined);
   }
 

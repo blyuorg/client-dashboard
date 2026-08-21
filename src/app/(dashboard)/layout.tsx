@@ -3,9 +3,8 @@ import { createClient, getUser } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Topbar } from "@/components/dashboard/topbar";
 import { AppearanceInit } from "@/components/layout/appearance-init";
-import { PresenceProvider } from "@/lib/presence/presence-provider";
 import { getUnreadMessageCount } from "@/lib/messages/queries";
-import type { AppearancePreferences, PrivacyPreferences } from "@/lib/settings/types";
+import type { AppearancePreferences } from "@/lib/settings/types";
 
 export default async function DashboardLayout({
   children,
@@ -25,10 +24,9 @@ export default async function DashboardLayout({
   ]);
 
   const appearance = profile?.preferences?.appearance as AppearancePreferences | undefined;
-  const privacy = profile?.preferences?.privacy as PrivacyPreferences | undefined;
 
   return (
-    <PresenceProvider userId={user.id} initialEnabled={privacy?.showOnlineStatus ?? true}>
+    <>
       <AppearanceInit accent={appearance?.accent ?? "blue"} fontSize={appearance?.fontSize ?? "medium"} />
       <div className="flex min-h-screen">
         <Sidebar isAdmin={profile?.role === "admin"} userId={user.id} initialUnreadCount={unreadCount} />
@@ -37,6 +35,6 @@ export default async function DashboardLayout({
           <main className="flex-1 bg-muted/20 p-6">{children}</main>
         </div>
       </div>
-    </PresenceProvider>
+    </>
   );
 }

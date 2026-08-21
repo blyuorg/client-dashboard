@@ -15,11 +15,13 @@ export function AdminMessagesPageClient({
   conversations,
   initialConversationId,
   initialMessages,
+  showOnlineStatus,
 }: {
   currentUserId: string;
   conversations: ConversationSummary[];
   initialConversationId: string | null;
   initialMessages: MessageView[];
+  showOnlineStatus: boolean;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(initialConversationId);
   const [messagesByConversation, setMessagesByConversation] = useState<Record<string, MessageView[]>>(
@@ -89,6 +91,7 @@ export function AdminMessagesPageClient({
                 currentUserId={currentUserId}
                 otherParticipant={selected.client}
                 initialMessages={messagesByConversation[selected.id] ?? []}
+                showOnlineStatus={showOnlineStatus}
               />
             )}
           </div>

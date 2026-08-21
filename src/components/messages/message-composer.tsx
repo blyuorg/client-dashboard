@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Loader2, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MESSAGE_MAX_LENGTH } from "@/lib/messages/types";
 import { cn } from "@/lib/utils";
@@ -9,26 +9,28 @@ import { cn } from "@/lib/utils";
 export function MessageComposer({
   disabled,
   onSend,
+  onTypingChange,
 }: {
   disabled?: boolean;
-  onSend: (body: string) => Promise<boolean>;
+  onSend: (body: string) => void;
+  onTypingChange?: (typing: boolean) => void;
 }) {
   const [value, setValue] = useState("");
-  const [sending, setSending] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const trimmed = value.trim();
-  const isDisabled = Boolean(disabled) || sending;
 
-  async function handleSend() {
-    if (!trimmed || isDisabled) return;
-    setSending(true);
-    const ok = await onSend(trimmed);
-    setSending(false);
-    if (ok) {
-      setValue("");
-      textareaRef.current?.focus();
-    }
+  function handleSend() {
+    if (!trimmed || disabled) return;
+    onSend(trimmed);
+    setValue("");
+    onTypingChange?.(false);
+    textareaRef.current?.focus();
+  }
+
+  function handleChange(next: string) {
+    setValue(next.slice(0, MESSAGE_MAX_LENGTH));
+    onTypingChange?.(next.trim().length > 0);
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -43,9 +45,10 @@ export function MessageComposer({
       <textarea
         ref={textareaRef}
         value={value}
-        onChange={(e) => setValue(e.target.value.slice(0, MESSAGE_MAX_LENGTH))}
+        onChange={(e) => handleChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        disabled={isDisabled}
+        onBlur={() => onTypingChange?.(false)}
+        disabled={disabled}
         placeholder={disabled ? "Messaging is unavailable" : "Type a message…"}
         rows={1}
         className={cn(
@@ -54,8 +57,8 @@ export function MessageComposer({
           "disabled:cursor-not-allowed disabled:opacity-50"
         )}
       />
-      <Button size="icon" onClick={handleSend} disabled={isDisabled || !trimmed} aria-label="Send message">
-        {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+      <Button size="icon" onClick={handleSend} disabled={disabled || !trimmed} aria-label="Send message">
+        <Send className="h-4 w-4" />
       </Button>
     </div>
   );

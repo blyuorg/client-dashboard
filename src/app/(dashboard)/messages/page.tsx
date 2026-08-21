@@ -8,6 +8,7 @@ import {
 import { ConversationPanel } from "@/components/messages/conversation-panel";
 import { NoAssignmentEmptyState } from "@/components/messages/empty-states";
 import { AdminMessagesPageClient } from "@/components/messages/messages-page-client";
+import type { PrivacyPreferences } from "@/lib/settings/types";
 
 export default async function MessagesPage() {
   const user = await getUser();
@@ -16,9 +17,11 @@ export default async function MessagesPage() {
   const supabase = await createClient();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, assigned_admin_id")
+    .select("role, assigned_admin_id, preferences")
     .eq("id", user.id)
     .single();
+
+  const showOnlineStatus = (profile?.preferences?.privacy as PrivacyPreferences | undefined)?.showOnlineStatus ?? true;
 
   if (profile?.role === "admin") {
     const conversations = await listAdminConversations(user.id);
@@ -38,6 +41,7 @@ export default async function MessagesPage() {
           conversations={conversations}
           initialConversationId={initialConversationId}
           initialMessages={initialMessages}
+          showOnlineStatus={showOnlineStatus}
         />
       </div>
     );
@@ -53,7 +57,12 @@ export default async function MessagesPage() {
       </div>
       <div className="h-[calc(100vh-11rem)] overflow-hidden rounded-2xl border border-border bg-background">
         {conversation ? (
-          <ConversationPanelWithParticipant conversationId={conversation.id} clientId={user.id} assignedAdminId={conversation.assigned_admin_id} />
+          <ConversationPanelWithParticipant
+            conversationId={conversation.id}
+            clientId={user.id}
+            assignedAdminId={conversation.assigned_admin_id}
+            showOnlineStatus={showOnlineStatus}
+          />
         ) : (
           <NoAssignmentEmptyState />
         )}
@@ -66,10 +75,12 @@ async function ConversationPanelWithParticipant({
   conversationId,
   clientId,
   assignedAdminId,
+  showOnlineStatus,
 }: {
   conversationId: string;
   clientId: string;
   assignedAdminId: string;
+  showOnlineStatus: boolean;
 }) {
   const [{ assignedAdmin }, initialMessages] = await Promise.all([
     getConversationParticipants(clientId, assignedAdminId),
@@ -84,6 +95,7 @@ async function ConversationPanelWithParticipant({
       currentUserId={clientId}
       otherParticipant={assignedAdmin}
       initialMessages={initialMessages}
+      showOnlineStatus={showOnlineStatus}
     />
   );
 }

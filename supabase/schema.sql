@@ -817,6 +817,15 @@ create policy "profiles_select_assigned_conversation_partner" on public.profiles
     )
   );
 
+-- NOTE: Realtime Authorization (RLS on realtime.messages, scoping the
+-- Messages feature's per-conversation presence/typing channels to their
+-- two participants) is NOT applied to this project — its SQL editor role
+-- doesn't own realtime.messages (42501). The policies to apply if that's
+-- ever resolved live in
+-- migrations/202608220001_realtime_channel_authorization.sql, kept out of
+-- this file specifically because, unlike everything above, it does not
+-- reflect this database's actual current state.
+
 -- ============================================================
 -- END OF SCHEMA
 -- ============================================================

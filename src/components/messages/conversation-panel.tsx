@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { sendMessage, markConversationRead } from "@/lib/messages/actions";
+import { useConversationRealtime } from "@/lib/messages/use-conversation-realtime";
 import { MESSAGE_PAGE_SIZE } from "@/lib/messages/types";
 import type { ConversationParticipant, MessageView } from "@/lib/messages/types";
 import { ConversationHeader } from "@/components/messages/conversation-header";
@@ -13,16 +14,32 @@ import { DateSeparator, isSameCalendarDay } from "@/components/messages/date-sep
 import { StartConversationEmptyState } from "@/components/messages/empty-states";
 import { toast } from "@/hooks/use-toast";
 
+type DirectMessageRow = { id: string; conversation_id: string; sender_id: string; body: string; created_at: string; read_at: string | null };
+
+function toMessageView(row: DirectMessageRow, currentUserId: string): MessageView {
+  return {
+    id: row.id,
+    conversationId: row.conversation_id,
+    senderId: row.sender_id,
+    body: row.body,
+    createdAt: row.created_at,
+    readAt: row.read_at,
+    isMine: row.sender_id === currentUserId,
+  };
+}
+
 export function ConversationPanel({
   conversationId,
   currentUserId,
   otherParticipant,
   initialMessages,
+  showOnlineStatus,
 }: {
   conversationId: string;
   currentUserId: string;
   otherParticipant: ConversationParticipant;
   initialMessages: MessageView[];
+  showOnlineStatus: boolean;
 }) {
   const [messages, setMessages] = useState<MessageView[]>(initialMessages);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -40,48 +57,39 @@ export function ConversationPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
 
-  // Realtime: one subscription per conversation, torn down on unmount or
-  // when the conversation changes — never left dangling or duplicated.
-  useEffect(() => {
-    const supabase = createClient();
-    const channel = supabase
-      .channel(`direct_messages:${conversationId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "direct_messages", filter: `conversation_id=eq.${conversationId}` },
-        (payload) => {
-          const row = payload.new as { id: string; sender_id: string; body: string; created_at: string; read_at: string | null };
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === row.id)) return prev;
-            return [
-              ...prev,
-              {
-                id: row.id,
-                conversationId,
-                senderId: row.sender_id,
-                body: row.body,
-                createdAt: row.created_at,
-                readAt: row.read_at,
-                isMine: row.sender_id === currentUserId,
-              },
-            ];
-          });
+  const handleInsert = useCallback(
+    (row: DirectMessageRow) => {
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === row.id)) return prev;
+        // Reconcile against our own optimistic "sending" bubble instead of
+        // appending a duplicate, in case this event wins the race against
+        // sendMessage's own response.
+        if (row.sender_id === currentUserId) {
+          const optimisticIndex = prev.findIndex((m) => m.status === "sending" && m.senderId === currentUserId && m.body === row.body);
+          if (optimisticIndex !== -1) {
+            const next = [...prev];
+            next[optimisticIndex] = toMessageView(row, currentUserId);
+            return next;
+          }
         }
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "direct_messages", filter: `conversation_id=eq.${conversationId}` },
-        (payload) => {
-          const row = payload.new as { id: string; read_at: string | null };
-          setMessages((prev) => prev.map((m) => (m.id === row.id ? { ...m, readAt: row.read_at } : m)));
-        }
-      )
-      .subscribe();
+        return [...prev, toMessageView(row, currentUserId)];
+      });
+    },
+    [currentUserId]
+  );
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [conversationId, currentUserId]);
+  const handleUpdate = useCallback((row: DirectMessageRow) => {
+    setMessages((prev) => prev.map((m) => (m.id === row.id ? { ...m, readAt: row.read_at } : m)));
+  }, []);
+
+  const { connectionStatus, otherOnline, otherTyping, sendTyping } = useConversationRealtime({
+    conversationId,
+    currentUserId,
+    otherUserId: otherParticipant.id,
+    showOnlineStatus,
+    onMessageInsert: handleInsert,
+    onMessageUpdate: handleUpdate,
+  });
 
   // Mark the other participant's messages read whenever new ones arrive
   // while this conversation is open.
@@ -105,25 +113,16 @@ export function ConversationPanel({
     if (scrollRef.current) previousScrollHeight.current = scrollRef.current.scrollHeight;
 
     const supabase = createClient();
+    const oldestLoaded = messages.find((m) => m.status !== "sending")?.createdAt ?? messages[0].createdAt;
     const { data } = await supabase
       .from("direct_messages")
       .select("id, conversation_id, sender_id, body, created_at, read_at")
       .eq("conversation_id", conversationId)
-      .lt("created_at", messages[0].createdAt)
+      .lt("created_at", oldestLoaded)
       .order("created_at", { ascending: false })
       .limit(MESSAGE_PAGE_SIZE);
 
-    const older = (data ?? [])
-      .map((row) => ({
-        id: row.id,
-        conversationId: row.conversation_id,
-        senderId: row.sender_id,
-        body: row.body,
-        createdAt: row.created_at,
-        readAt: row.read_at,
-        isMine: row.sender_id === currentUserId,
-      }))
-      .reverse();
+    const older = (data ?? []).map((row) => toMessageView(row, currentUserId)).reverse();
 
     setHasMore(older.length >= MESSAGE_PAGE_SIZE);
     setMessages((prev) => [...older, ...prev]);
@@ -150,20 +149,52 @@ export function ConversationPanel({
     shouldAutoScroll.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
   }
 
-  async function handleSend(body: string): Promise<boolean> {
+  async function handleSend(body: string, retryClientId?: string) {
     shouldAutoScroll.current = true;
+    const clientId = retryClientId ?? crypto.randomUUID();
+    const optimistic: MessageView = {
+      id: clientId,
+      conversationId,
+      senderId: currentUserId,
+      body,
+      createdAt: new Date().toISOString(),
+      readAt: null,
+      isMine: true,
+      status: "sending",
+      clientId,
+    };
+
+    setMessages((prev) => (retryClientId ? prev.map((m) => (m.clientId === retryClientId ? optimistic : m)) : [...prev, optimistic]));
+
     const result = await sendMessage(conversationId, body);
+
     if (result.error || !result.message) {
+      setMessages((prev) => prev.map((m) => (m.clientId === clientId ? { ...m, status: "failed" } : m)));
       toast({ variant: "destructive", title: "Couldn't send message", description: result.error ?? "Please try again." });
-      return false;
+      return;
     }
-    setMessages((prev) => (prev.some((m) => m.id === result.message!.id) ? prev : [...prev, result.message!]));
-    return true;
+
+    const confirmed = result.message;
+    setMessages((prev) => {
+      // Realtime may have already reconciled this optimistic bubble (see
+      // handleInsert) — if so there's nothing left to replace by clientId,
+      // and appending here would duplicate it.
+      if (prev.some((m) => m.clientId === clientId)) {
+        return prev.map((m) => (m.clientId === clientId ? { ...confirmed, status: "sent" } : m));
+      }
+      if (prev.some((m) => m.id === confirmed.id)) return prev;
+      return [...prev, { ...confirmed, status: "sent" }];
+    });
   }
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <ConversationHeader participant={otherParticipant} />
+      <ConversationHeader
+        participant={otherParticipant}
+        online={otherOnline}
+        typing={otherTyping}
+        connectionStatus={connectionStatus}
+      />
 
       <div ref={scrollRef} onScroll={handleScroll} className="flex-1 space-y-1 overflow-y-auto p-4">
         {loadingOlder && (
@@ -181,14 +212,17 @@ export function ConversationPanel({
             return (
               <div key={message.id}>
                 {showSeparator && <DateSeparator date={message.createdAt} />}
-                <MessageBubble message={message} />
+                <MessageBubble
+                  message={message}
+                  onRetry={(m) => handleSend(m.body, m.clientId)}
+                />
               </div>
             );
           })
         )}
       </div>
 
-      <MessageComposer onSend={handleSend} />
+      <MessageComposer onSend={(body) => handleSend(body)} onTypingChange={sendTyping} />
     </div>
   );
 }

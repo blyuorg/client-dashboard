@@ -44,6 +44,9 @@ async function loadAuthorizedConversation(
   return conversation;
 }
 
+const RATE_LIMIT_WINDOW_SECONDS = 10;
+const RATE_LIMIT_MAX_MESSAGES = 15;
+
 export async function sendMessage(
   conversationId: string,
   body: string
@@ -57,6 +60,19 @@ export async function sendMessage(
 
   const conversation = await loadAuthorizedConversation(supabase, conversationId, user.id);
   if (!conversation) return { error: "You don't have access to this conversation." };
+
+  // Stateless rate limit: no in-memory counters survive across serverless
+  // invocations, so ask the database — it's the one thing guaranteed to be
+  // consistent across every instance handling this user's requests.
+  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_SECONDS * 1000).toISOString();
+  const { count: recentCount } = await supabase
+    .from("direct_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("sender_id", user.id)
+    .gte("created_at", windowStart);
+  if ((recentCount ?? 0) >= RATE_LIMIT_MAX_MESSAGES) {
+    return { error: "You're sending messages too fast. Please wait a moment." };
+  }
 
   const { data: inserted, error: insertError } = await supabase
     .from("direct_messages")
