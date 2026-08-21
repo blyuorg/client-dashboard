@@ -31,6 +31,7 @@ export type ClientProfileInput = {
   business_type?: BusinessType | null;
   preferred_communication?: string | null;
   notes?: string | null;
+  assigned_admin_id?: string | null;
 };
 
 export async function updateClientProfile(
@@ -40,10 +41,32 @@ export async function updateClientProfile(
   const { supabase, error: authError } = await requireAdmin();
   if (authError) return { error: authError };
 
-  const { error } = await supabase.from("profiles").update(input).eq("id", clientId);
+  // The edit form's plain <select>/<input> fields submit "" for "not set"
+  // (uncontrolled HTML has no other way to express that) — business_type
+  // is a Postgres enum with no "" member, so passing it through verbatim
+  // fails the update outright. Every optional field here means the same
+  // "clear it" intent whether it's "" or omitted, so normalize both.
+  const sanitized = Object.fromEntries(
+    Object.entries(input).map(([key, value]) => [key, value === "" ? null : value])
+  ) as ClientProfileInput;
+
+  const { error } = await supabase.from("profiles").update(sanitized).eq("id", clientId);
   if (error) return { error: getReadableErrorMessage(error) };
 
+  // Keep the 1-to-1 messaging conversation in sync with the assignment:
+  // provisions it on first assignment, and re-points it (preserving message
+  // history) on reassignment. Clearing the assignment (null) deliberately
+  // leaves the conversation row alone — history stays intact and readable,
+  // it just stops accepting new messages until someone is assigned again.
+  if (input.assigned_admin_id) {
+    const { error: conversationError } = await supabase
+      .from("conversations")
+      .upsert({ client_id: clientId, assigned_admin_id: input.assigned_admin_id }, { onConflict: "client_id" });
+    if (conversationError) return { error: getReadableErrorMessage(conversationError) };
+  }
+
   revalidatePath("/admin/clients");
+  revalidatePath("/messages");
   return { error: null };
 }
 

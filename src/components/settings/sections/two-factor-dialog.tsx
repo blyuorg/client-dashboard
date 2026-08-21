@@ -19,7 +19,15 @@ import { useSettingsToast } from "@/components/settings/settings-toast-provider"
 
 type EnrollState = { factorId: string; qrCode: string; secret: string } | null;
 
-export function TwoFactorDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function TwoFactorDialog({
+  open,
+  onOpenChange,
+  onStatusChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onStatusChange?: (enabled: boolean) => void;
+}) {
   const showToast = useSettingsToast();
   const [loading, setLoading] = useState(true);
   const [enabledFactorId, setEnabledFactorId] = useState<string | null>(null);
@@ -40,7 +48,9 @@ export function TwoFactorDialog({ open, onOpenChange }: { open: boolean; onOpenC
       if (listError) return setError(getReadableErrorMessage(listError));
       const verified = data?.totp.find((f) => f.status === "verified");
       setEnabledFactorId(verified?.id ?? null);
+      onStatusChange?.(Boolean(verified));
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   async function startEnroll() {
@@ -70,6 +80,7 @@ export function TwoFactorDialog({ open, onOpenChange }: { open: boolean; onOpenC
     setEnrolling(null);
     setCode("");
     showToast("Two-factor authentication enabled");
+    onStatusChange?.(true);
   }
 
   async function disable() {
@@ -83,6 +94,7 @@ export function TwoFactorDialog({ open, onOpenChange }: { open: boolean; onOpenC
     if (unenrollError) return setError(getReadableErrorMessage(unenrollError));
     setEnabledFactorId(null);
     showToast("Two-factor authentication disabled");
+    onStatusChange?.(false);
   }
 
   return (

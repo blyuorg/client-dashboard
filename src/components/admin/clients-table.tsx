@@ -7,9 +7,12 @@ import { Pencil } from "lucide-react";
 import { EditClientDialog } from "./edit-client-dialog";
 import type { Profile } from "@/types/database";
 
-export function ClientsTable({ clients }: { clients: Profile[] }) {
+type AdminOption = Pick<Profile, "id" | "full_name" | "email">;
+
+export function ClientsTable({ clients, admins }: { clients: Profile[]; admins: AdminOption[] }) {
   const [editing, setEditing] = useState<Profile | null>(null);
   const [open, setOpen] = useState(false);
+  const adminById = new Map(admins.map((admin) => [admin.id, admin]));
 
   return (
     <>
@@ -20,6 +23,7 @@ export function ClientsTable({ clients }: { clients: Profile[] }) {
             <TableHead>Contact</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Phone</TableHead>
+            <TableHead>Assigned to</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -30,6 +34,13 @@ export function ClientsTable({ clients }: { clients: Profile[] }) {
               <TableCell>{client.owner_name || client.full_name || "—"}</TableCell>
               <TableCell>{client.email}</TableCell>
               <TableCell>{client.phone || "—"}</TableCell>
+              <TableCell className="text-muted-foreground">
+                {client.assigned_admin_id
+                  ? adminById.get(client.assigned_admin_id)?.full_name ||
+                    adminById.get(client.assigned_admin_id)?.email ||
+                    "—"
+                  : "Unassigned"}
+              </TableCell>
               <TableCell className="text-right">
                 <Button
                   size="sm"
@@ -47,7 +58,7 @@ export function ClientsTable({ clients }: { clients: Profile[] }) {
           ))}
           {clients.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
+              <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
                 No clients yet.
               </TableCell>
             </TableRow>
@@ -55,7 +66,7 @@ export function ClientsTable({ clients }: { clients: Profile[] }) {
         </TableBody>
       </Table>
 
-      <EditClientDialog client={editing} open={open} onOpenChange={setOpen} />
+      <EditClientDialog client={editing} admins={admins} open={open} onOpenChange={setOpen} />
     </>
   );
 }

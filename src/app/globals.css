@@ -65,6 +65,63 @@
   }
 }
 
+/* Settings → Appearance → Accent Color. Overrides the two tokens that
+   actually drive the accent throughout the app (buttons, links, focus
+   rings, the active PillGroup option, badges, etc. all read `primary`).
+   Applied via a `data-accent` attribute on <html> so it's a single,
+   sitewide switch rather than a prop threaded through every component. */
+[data-accent="blue"] {
+  --primary: 217 91% 60%;
+  --ring: 217 91% 60%;
+}
+[data-accent="violet"] {
+  --primary: 258 90% 66%;
+  --ring: 258 90% 66%;
+}
+[data-accent="emerald"] {
+  --primary: 160 84% 39%;
+  --ring: 160 84% 39%;
+}
+[data-accent="amber"] {
+  --primary: 38 92% 50%;
+  --ring: 38 92% 50%;
+}
+[data-accent="rose"] {
+  --primary: 350 89% 60%;
+  --ring: 350 89% 60%;
+}
+.dark[data-accent="blue"] {
+  --primary: 217 100% 65%;
+  --ring: 217 100% 65%;
+}
+.dark[data-accent="violet"] {
+  --primary: 258 90% 70%;
+  --ring: 258 90% 70%;
+}
+.dark[data-accent="emerald"] {
+  --primary: 160 84% 45%;
+  --ring: 160 84% 45%;
+}
+.dark[data-accent="amber"] {
+  --primary: 38 92% 55%;
+  --ring: 38 92% 55%;
+}
+.dark[data-accent="rose"] {
+  --primary: 350 89% 65%;
+  --ring: 350 89% 65%;
+}
+
+/* Settings → Appearance → Font Size. Scales the root rem base so every
+   Tailwind text-* utility (all rem-based) resizes sitewide, instead of a
+   per-component override — this is what "respected wherever practical"
+   actually means: nothing below has to know font size exists. */
+html[data-font-size="small"] {
+  font-size: 15px;
+}
+html[data-font-size="large"] {
+  font-size: 18px;
+}
+
 /* Respect the OS-level "reduce motion" preference: shrink animation/transition
    durations to near-zero instead of removing them outright, so elements that
    rely on a transition firing (e.g. Radix open/close state) still work, they
@@ -79,15 +136,4 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-}
-
-/* Same effect, opted into explicitly via Settings → Appearance → Reduce
-   Motion, independent of the OS-level media query above. */
-html[data-reduce-motion="true"] *,
-html[data-reduce-motion="true"] *::before,
-html[data-reduce-motion="true"] *::after {
-  animation-duration: 0.01ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 0.01ms !important;
-  scroll-behavior: auto !important;
 }

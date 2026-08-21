@@ -1,48 +1,47 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail, Phone, CheckCircle2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { updatePassword } from "@/lib/supabase/auth";
-import { useSettingsToast } from "@/components/settings/settings-toast-provider";
+import { sendPasswordResetEmail } from "@/lib/supabase/auth";
 
-export function ChangePasswordDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const showToast = useSettingsToast();
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
+type Method = "email" | "phone";
+
+export function ChangePasswordDialog({
+  open,
+  onOpenChange,
+  email,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  email: string;
+}) {
+  const [method, setMethod] = useState<Method>("email");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
 
   function reset() {
-    setPassword("");
-    setConfirm("");
+    setMethod("email");
+    setSending(false);
+    setSent(false);
     setError(null);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (password.length < 6) return setError("Use at least 6 characters.");
-    if (password !== confirm) return setError("Passwords don't match.");
-
-    setSaving(true);
+  async function handleSendEmail() {
+    setSending(true);
     setError(null);
-    const { error: updateError } = await updatePassword(password);
-    setSaving(false);
-
-    if (updateError) return setError(updateError);
-    reset();
-    onOpenChange(false);
-    showToast("Password changed");
+    const { error: sendError } = await sendPasswordResetEmail(email, `${window.location.origin}/reset-password`);
+    setSending(false);
+    if (sendError) return setError(sendError);
+    setSent(true);
   }
 
   return (
@@ -56,43 +55,69 @@ export function ChangePasswordDialog({ open, onOpenChange }: { open: boolean; on
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Change Password</DialogTitle>
-          <DialogDescription>Choose a new password for your account.</DialogDescription>
+          <DialogDescription>Choose how you&apos;d like to verify it&apos;s you.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="new-password">New password</Label>
-            <Input
-              id="new-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="new-password"
-              required
-            />
+
+        {sent ? (
+          <div className="flex flex-col items-center gap-3 py-4 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10 text-success">
+              <CheckCircle2 className="h-6 w-6" />
+            </span>
+            <div>
+              <p className="text-sm font-medium">Check your inbox</p>
+              <p className="text-sm text-muted-foreground">
+                We sent a secure reset link to {email}. Open it to choose a new password.
+              </p>
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="confirm-password">Confirm password</Label>
-            <Input
-              id="confirm-password"
-              type="password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              autoComplete="new-password"
-              required
-            />
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setMethod("email")}
+                className={`flex flex-col items-center gap-1.5 rounded-lg border p-3 text-sm transition-colors ${
+                  method === "email" ? "border-primary bg-primary/5" : "border-border hover:bg-secondary/50"
+                }`}
+              >
+                <Mail className="h-4 w-4" />
+                Email
+              </button>
+              <button
+                type="button"
+                onClick={() => setMethod("phone")}
+                className={`flex flex-col items-center gap-1.5 rounded-lg border p-3 text-sm transition-colors ${
+                  method === "phone" ? "border-primary bg-primary/5" : "border-border hover:bg-secondary/50"
+                }`}
+              >
+                <Phone className="h-4 w-4" />
+                Phone
+              </button>
+            </div>
+
+            {method === "email" ? (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  We&apos;ll send a secure reset link to your registered email, <span className="font-medium text-foreground">{email}</span>.
+                </p>
+                {error && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {error}
+                  </p>
+                )}
+                <Button onClick={handleSendEmail} disabled={sending} className="w-full">
+                  {sending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Send reset link
+                </Button>
+              </div>
+            ) : (
+              <p className="rounded-lg border border-border bg-secondary/30 p-3 text-sm text-muted-foreground">
+                Phone-based password recovery isn&apos;t available yet — this account isn&apos;t set up for
+                phone verification. Use email instead.
+              </p>
+            )}
           </div>
-          {error && (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
-            </p>
-          )}
-          <DialogFooter>
-            <Button type="submit" disabled={saving}>
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Change Password
-            </Button>
-          </DialogFooter>
-        </form>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -671,5 +671,152 @@ create policy "invoice_line_items_admin_delete" on public.invoice_line_items
   for delete using (public.is_admin());
 
 -- ============================================================
+-- 1-TO-1 DIRECT MESSAGING (client <-> assigned admin)
+-- ============================================================
+-- See migrations/202608210002_direct_messaging.sql for the full annotated
+-- version of this section, including why each guard exists.
+
+alter table public.profiles
+  add column if not exists assigned_admin_id uuid references public.profiles(id) on delete set null;
+
+create or replace function public.enforce_assigned_admin_admin_only()
+returns trigger as $$
+begin
+  if new.assigned_admin_id is distinct from old.assigned_admin_id then
+    if not public.is_admin() then
+      raise exception 'Only an admin can change assigned_admin_id';
+    end if;
+    if new.assigned_admin_id is not null and not exists (
+      select 1 from public.profiles p where p.id = new.assigned_admin_id and p.role = 'admin'
+    ) then
+      raise exception 'assigned_admin_id must reference an admin profile';
+    end if;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists trg_profiles_assigned_admin_admin_only on public.profiles;
+create trigger trg_profiles_assigned_admin_admin_only
+  before update on public.profiles
+  for each row execute function public.enforce_assigned_admin_admin_only();
+
+create table public.conversations (
+  id uuid primary key default uuid_generate_v4(),
+  client_id uuid not null unique references public.profiles(id) on delete cascade,
+  assigned_admin_id uuid not null references public.profiles(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index on public.conversations (assigned_admin_id);
+
+create table public.direct_messages (
+  id uuid primary key default uuid_generate_v4(),
+  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  sender_id uuid not null references public.profiles(id),
+  body text not null check (char_length(btrim(body)) between 1 and 4000),
+  read_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index on public.direct_messages (conversation_id, created_at);
+create index on public.direct_messages (sender_id);
+create index on public.direct_messages (conversation_id) where read_at is null;
+
+create or replace function public.enforce_direct_message_immutability()
+returns trigger as $$
+begin
+  if new.body <> old.body
+     or new.sender_id <> old.sender_id
+     or new.conversation_id <> old.conversation_id
+     or new.created_at <> old.created_at then
+    raise exception 'direct_messages rows are immutable except for read_at';
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists trg_direct_messages_immutable on public.direct_messages;
+create trigger trg_direct_messages_immutable
+  before update on public.direct_messages
+  for each row execute function public.enforce_direct_message_immutability();
+
+create or replace function public.touch_conversation_on_message()
+returns trigger as $$
+begin
+  update public.conversations set updated_at = now() where id = new.conversation_id;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists trg_touch_conversation_on_message on public.direct_messages;
+create trigger trg_touch_conversation_on_message
+  after insert on public.direct_messages
+  for each row execute function public.touch_conversation_on_message();
+
+alter table public.conversations enable row level security;
+alter table public.direct_messages enable row level security;
+
+create policy "conversations_select_participant" on public.conversations
+  for select using (
+    client_id = auth.uid() or assigned_admin_id = auth.uid() or public.is_admin()
+  );
+
+create policy "conversations_admin_insert" on public.conversations
+  for insert with check (public.is_admin());
+
+create policy "conversations_admin_update" on public.conversations
+  for update using (public.is_admin());
+
+create policy "direct_messages_select_participant" on public.direct_messages
+  for select using (
+    exists (
+      select 1 from public.conversations c
+      where c.id = conversation_id
+        and (c.client_id = auth.uid() or c.assigned_admin_id = auth.uid() or public.is_admin())
+    )
+  );
+
+create policy "direct_messages_insert_participant" on public.direct_messages
+  for insert with check (
+    sender_id = auth.uid()
+    and exists (
+      select 1 from public.conversations c
+      where c.id = conversation_id
+        and (c.client_id = auth.uid() or c.assigned_admin_id = auth.uid() or public.is_admin())
+    )
+  );
+
+create policy "direct_messages_update_read" on public.direct_messages
+  for update using (
+    sender_id <> auth.uid()
+    and exists (
+      select 1 from public.conversations c
+      where c.id = conversation_id
+        and (c.client_id = auth.uid() or c.assigned_admin_id = auth.uid() or public.is_admin())
+    )
+  );
+
+do $$
+begin
+  alter publication supabase_realtime add table public.direct_messages;
+exception
+  when duplicate_object then null;
+end $$;
+
+-- A client needs to read their assigned admin's name/avatar for the
+-- conversation header — profiles_select_own_or_admin alone doesn't cover
+-- that. Admins already see every profile via is_admin(), so this is
+-- one-directional.
+create policy "profiles_select_assigned_conversation_partner" on public.profiles
+  for select using (
+    exists (
+      select 1 from public.conversations c
+      where c.client_id = auth.uid() and c.assigned_admin_id = profiles.id
+    )
+  );
+
+-- ============================================================
 -- END OF SCHEMA
 -- ============================================================

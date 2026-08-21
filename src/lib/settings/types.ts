@@ -21,21 +21,22 @@ export type SettingsSectionMeta = {
 
 // Shape persisted in profiles.preferences (jsonb). Every section is optional
 // since older profiles start with `{}` before ever saving a section.
+export type NotificationFrequency = "instant" | "daily" | "weekly" | "never";
+
 export type NotificationsPreferences = {
-  channels: Record<string, boolean>;
-  types: Record<string, boolean>;
-  frequency: "instant" | "daily" | "weekly";
+  frequency: NotificationFrequency;
 };
 
-export type PrivacyPreferences = Record<string, boolean>;
+export type PrivacyPreferences = {
+  showOnlineStatus: boolean;
+};
+
+export type AccentColor = "blue" | "violet" | "emerald" | "amber" | "rose";
+export type FontSize = "small" | "medium" | "large";
 
 export type AppearancePreferences = {
-  theme: "dark" | "light" | "system";
-  accent: string;
-  density: "comfortable" | "compact";
-  fontSize: "small" | "medium" | "large";
-  enableAnimations: boolean;
-  reduceMotion: boolean;
+  accent: AccentColor;
+  fontSize: FontSize;
 };
 
 export type LanguagePreferences = {

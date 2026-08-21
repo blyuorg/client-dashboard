@@ -62,14 +62,6 @@ export async function signOut(): Promise<{ error: string | null }> {
   return { error: null };
 }
 
-/** Signs out every session for this user except the one making the call. */
-export async function signOutOtherSessions(): Promise<{ error: string | null }> {
-  const supabase = createClient();
-  const { error } = await supabase.auth.signOut({ scope: "others" });
-  if (error) return { error: getReadableErrorMessage(error) };
-  return { error: null };
-}
-
 export async function getCurrentUser(): Promise<AuthResult<User>> {
   const supabase = createClient();
   const { data, error } = await supabase.auth.getUser();

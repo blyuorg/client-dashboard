@@ -20,12 +20,16 @@ import type { BusinessType, Profile } from "@/types/database";
 
 const BUSINESS_TYPES: BusinessType[] = ["individual", "startup", "sme", "enterprise", "other"];
 
+type AdminOption = Pick<Profile, "id" | "full_name" | "email">;
+
 export function EditClientDialog({
   client,
+  admins,
   open,
   onOpenChange,
 }: {
   client: Profile | null;
+  admins: AdminOption[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -45,6 +49,7 @@ export function EditClientDialog({
         business_type: client.business_type ?? undefined,
         preferred_communication: client.preferred_communication ?? "",
         notes: client.notes ?? "",
+        assigned_admin_id: client.assigned_admin_id ?? "",
       });
     }
     onOpenChange(next);
@@ -53,7 +58,10 @@ export function EditClientDialog({
   async function onSubmit(values: ClientProfileInput) {
     if (!client) return;
     setSaving(true);
-    const { error } = await updateClientProfile(client.id, values);
+    const { error } = await updateClientProfile(client.id, {
+      ...values,
+      assigned_admin_id: values.assigned_admin_id || null,
+    });
     setSaving(false);
 
     if (error) {
@@ -118,6 +126,22 @@ export function EditClientDialog({
                 <div className="space-y-1.5">
                   <Label htmlFor="preferred_communication">Preferred communication</Label>
                   <Input id="preferred_communication" {...register("preferred_communication")} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="assigned_admin_id">Assigned to</Label>
+                  <select
+                    id="assigned_admin_id"
+                    {...register("assigned_admin_id")}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">Unassigned</option>
+                    {admins.map((admin) => (
+                      <option key={admin.id} value={admin.id}>
+                        {admin.full_name || admin.email}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground">Who this client messages 1-to-1 in Messages.</p>
                 </div>
                 <div className="col-span-2 space-y-1.5">
                   <Label htmlFor="address">Address</Label>

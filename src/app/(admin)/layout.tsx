@@ -9,7 +9,6 @@ const adminNav = [
   { href: "/admin/clients", label: "Clients" },
   { href: "/admin/projects", label: "Projects" },
   { href: "/admin/invoices", label: "Invoices" },
-  { href: "/admin/messages", label: "Messages" },
 ];
 
 export default async function AdminLayout({

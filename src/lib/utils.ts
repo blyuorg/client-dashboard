@@ -18,6 +18,10 @@ export function formatDate(date: string | null): string {
   return new Date(date).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
 }
 
+export function formatTime(date: string): string {
+  return new Date(date).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+}
+
 export function formatRelativeTime(date: string): string {
   const diffMs = Date.now() - new Date(date).getTime();
   const minutes = Math.round(diffMs / 60_000);

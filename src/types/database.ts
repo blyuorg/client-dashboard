@@ -38,6 +38,7 @@ export type Profile = {
   preferred_communication: string | null;
   notes: string | null;
   preferences: Record<string, unknown>;
+  assigned_admin_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -219,6 +220,23 @@ export type Notification = {
   created_at: string;
 };
 
+export type Conversation = {
+  id: string;
+  client_id: string;
+  assigned_admin_id: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DirectMessage = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  body: string;
+  read_at: string | null;
+  created_at: string;
+};
+
 export type Meeting = {
   id: string;
   project_id: string | null;
@@ -319,6 +337,18 @@ export type Database = {
         Row: Notification;
         Insert: Partial<Notification>;
         Update: Partial<Notification>;
+        Relationships: [];
+      };
+      conversations: {
+        Row: Conversation;
+        Insert: Partial<Conversation>;
+        Update: Partial<Conversation>;
+        Relationships: [];
+      };
+      direct_messages: {
+        Row: DirectMessage;
+        Insert: Partial<DirectMessage>;
+        Update: Partial<DirectMessage>;
         Relationships: [];
       };
     };
