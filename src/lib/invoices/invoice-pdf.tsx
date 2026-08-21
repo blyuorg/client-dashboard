@@ -1,7 +1,38 @@
-import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
-import { formatMoney } from "@/lib/invoices/calculations";
+import * as React from "react";
+import { Document, Page, View, Text, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
+import { formatMoney as formatMoneyBase } from "@/lib/invoices/calculations";
 import { COMPANY_INFO } from "@/lib/invoices/company";
 import type { GstType, InvoiceStatus } from "@/types/database";
+
+/**
+ * The base-14 Helvetica font (react-pdf's default, no embedding required)
+ * has no glyph for ₹, so `formatMoney`'s Intl output renders as a broken
+ * character in the PDF. Swap it for a plain "INR" prefix here only — the
+ * on-screen UI keeps the real symbol via the shared formatter.
+ */
+function formatMoney(amount: number, currency = "INR"): string {
+  const formatted = formatMoneyBase(amount, currency).replace(/^[^\d-]+/, "").trim();
+  return `${currency} ${formatted}`;
+}
+
+/**
+ * Next's app-router build substitutes its own vendored (canary) React for
+ * every `import ... from "react"` it compiles, including this file — but
+ * @react-pdf/renderer's bundled reconciler resolves the project's real
+ * installed React (18.x) directly from node_modules, bypassing that
+ * substitution. The two React copies tag elements differently ($$typeof:
+ * "react.transitional.element" vs "react.element"), so elements built with
+ * the substituted React are invalid input to the reconciler and it throws
+ * React error #31 on every render.
+ *
+ * `turbopackIgnore`/`webpackIgnore` make this one `require("react")` skip
+ * both bundlers' static resolution, so it genuinely resolves at runtime via
+ * Node — landing on the same real React 18 copy the reconciler uses. `h`
+ * (its `createElement`) is then used instead of JSX so no element in this
+ * file is ever created via the substituted React.
+ */
+const RealReact: typeof React = require(/* turbopackIgnore: true */ /* webpackIgnore: true */ "react");
+const h = RealReact.createElement;
 
 const styles = StyleSheet.create({
   page: { padding: 40, fontSize: 10, fontFamily: "Helvetica", color: "#1a1a1a" },
@@ -108,150 +139,209 @@ export function InvoicePdfDocument({ invoice }: { invoice: InvoicePdfData }) {
   const statusColors = STATUS_COLORS[invoice.status];
   const taxableAmount = invoice.subtotal - invoice.discount;
 
-  return (
-    <Document title={`Invoice ${invoice.invoice_number}`}>
-      <Page size="A4" style={styles.page}>
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.companyName}>{COMPANY_INFO.name}</Text>
-            <Text style={styles.muted}>{COMPANY_INFO.address}</Text>
-            {!!COMPANY_INFO.gstNumber && <Text style={styles.muted}>GSTIN: {COMPANY_INFO.gstNumber}</Text>}
-            {!!COMPANY_INFO.email && <Text style={styles.muted}>{COMPANY_INFO.email}</Text>}
-          </View>
-          <View>
-            <Text style={styles.invoiceTitle}>INVOICE</Text>
-            <Text style={{ textAlign: "right" }}>{invoice.invoice_number}</Text>
-            <Text
-              style={[styles.badge, { backgroundColor: statusColors.bg, color: statusColors.color }]}
-            >
-              {invoice.status}
-            </Text>
-          </View>
-        </View>
+  return h(
+    Document,
+    { title: `Invoice ${invoice.invoice_number}` },
+    h(
+      Page,
+      { size: "A4", style: styles.page },
+      h(
+        View,
+        { style: styles.headerRow },
+        h(
+          View,
+          null,
+          h(Text, { style: styles.companyName }, COMPANY_INFO.name),
+          h(Text, { style: styles.muted }, COMPANY_INFO.address),
+          !!COMPANY_INFO.gstNumber && h(Text, { style: styles.muted }, `GSTIN: ${COMPANY_INFO.gstNumber}`),
+          !!COMPANY_INFO.email && h(Text, { style: styles.muted }, COMPANY_INFO.email)
+        ),
+        h(
+          View,
+          null,
+          h(Text, { style: styles.invoiceTitle }, "INVOICE"),
+          h(Text, { style: { textAlign: "right" } }, invoice.invoice_number),
+          h(
+            Text,
+            { style: [styles.badge, { backgroundColor: statusColors.bg, color: statusColors.color }] },
+            invoice.status
+          )
+        )
+      ),
 
-        <View style={styles.sectionRow}>
-          <View style={styles.sectionBlock}>
-            <Text style={styles.sectionLabel}>Billed to</Text>
-            <Text style={styles.bold}>{invoice.client.companyName || invoice.client.name}</Text>
-            {!!invoice.client.companyName && <Text>{invoice.client.name}</Text>}
-            <Text style={styles.muted}>{invoice.client.email}</Text>
-            {!!invoice.client.address && <Text style={styles.muted}>{invoice.client.address}</Text>}
-            {!!invoice.client.gstNumber && <Text style={styles.muted}>GSTIN: {invoice.client.gstNumber}</Text>}
-          </View>
-          <View style={[styles.sectionBlock, { alignItems: "flex-end" }]}>
-            <Text style={styles.sectionLabel}>Project</Text>
-            <Text style={styles.bold}>{invoice.projectTitle}</Text>
-          </View>
-        </View>
+      h(
+        View,
+        { style: styles.sectionRow },
+        h(
+          View,
+          { style: styles.sectionBlock },
+          h(Text, { style: styles.sectionLabel }, "Billed to"),
+          h(Text, { style: styles.bold }, invoice.client.companyName || invoice.client.name),
+          !!invoice.client.companyName && h(Text, null, invoice.client.name),
+          h(Text, { style: styles.muted }, invoice.client.email),
+          !!invoice.client.address && h(Text, { style: styles.muted }, invoice.client.address),
+          !!invoice.client.gstNumber && h(Text, { style: styles.muted }, `GSTIN: ${invoice.client.gstNumber}`)
+        ),
+        h(
+          View,
+          { style: [styles.sectionBlock, { alignItems: "flex-end" }] },
+          h(Text, { style: styles.sectionLabel }, "Project"),
+          h(Text, { style: styles.bold }, invoice.projectTitle)
+        )
+      ),
 
-        <View style={styles.metaGrid}>
-          <View style={styles.metaItem}>
-            <Text style={styles.sectionLabel}>Invoice date</Text>
-            <Text>{formatDatePdf(invoice.invoice_date)}</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Text style={styles.sectionLabel}>Due date</Text>
-            <Text>{formatDatePdf(invoice.due_date)}</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Text style={styles.sectionLabel}>GST treatment</Text>
-            <Text>{gstLabel(invoice.gst_type)}</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Text style={styles.sectionLabel}>Currency</Text>
-            <Text>{invoice.currency}</Text>
-          </View>
-        </View>
+      h(
+        View,
+        { style: styles.metaGrid },
+        h(
+          View,
+          { style: styles.metaItem },
+          h(Text, { style: styles.sectionLabel }, "Invoice date"),
+          h(Text, null, formatDatePdf(invoice.invoice_date))
+        ),
+        h(
+          View,
+          { style: styles.metaItem },
+          h(Text, { style: styles.sectionLabel }, "Due date"),
+          h(Text, null, formatDatePdf(invoice.due_date))
+        ),
+        h(
+          View,
+          { style: styles.metaItem },
+          h(Text, { style: styles.sectionLabel }, "GST treatment"),
+          h(Text, null, gstLabel(invoice.gst_type))
+        ),
+        h(
+          View,
+          { style: styles.metaItem },
+          h(Text, { style: styles.sectionLabel }, "Currency"),
+          h(Text, null, invoice.currency)
+        )
+      ),
 
-        <View style={styles.table}>
-          <View style={styles.tableHeaderRow}>
-            <Text style={[styles.colDesc, styles.th]}>Description</Text>
-            <Text style={[styles.colQty, styles.th]}>Qty</Text>
-            <Text style={[styles.colPrice, styles.th]}>Rate</Text>
-            <Text style={[styles.colDiscount, styles.th]}>Disc.</Text>
-            <Text style={[styles.colAmount, styles.th]}>Amount</Text>
-          </View>
-          {invoice.lineItems.map((item, index) => (
-            <View style={styles.tableRow} key={index}>
-              <Text style={styles.colDesc}>{item.description}</Text>
-              <Text style={styles.colQty}>{item.quantity}</Text>
-              <Text style={styles.colPrice}>{formatMoney(item.unit_price, invoice.currency)}</Text>
-              <Text style={styles.colDiscount}>{item.discount_percent > 0 ? `${item.discount_percent}%` : "—"}</Text>
-              <Text style={styles.colAmount}>{formatMoney(item.taxable_amount, invoice.currency)}</Text>
-            </View>
-          ))}
-        </View>
+      h(
+        View,
+        { style: styles.table },
+        h(
+          View,
+          { style: styles.tableHeaderRow },
+          h(Text, { style: [styles.colDesc, styles.th] }, "Description"),
+          h(Text, { style: [styles.colQty, styles.th] }, "Qty"),
+          h(Text, { style: [styles.colPrice, styles.th] }, "Rate"),
+          h(Text, { style: [styles.colDiscount, styles.th] }, "Disc."),
+          h(Text, { style: [styles.colAmount, styles.th] }, "Amount")
+        ),
+        ...invoice.lineItems.map((item, index) =>
+          h(
+            View,
+            { style: styles.tableRow, key: index },
+            h(Text, { style: styles.colDesc }, item.description),
+            h(Text, { style: styles.colQty }, item.quantity),
+            h(Text, { style: styles.colPrice }, formatMoney(item.unit_price, invoice.currency)),
+            h(Text, { style: styles.colDiscount }, item.discount_percent > 0 ? `${item.discount_percent}%` : "—"),
+            h(Text, { style: styles.colAmount }, formatMoney(item.taxable_amount, invoice.currency))
+          )
+        )
+      ),
 
-        <View style={styles.totalsWrap}>
-          <View style={styles.totalsBox}>
-            <View style={styles.totalsRow}>
-              <Text>Subtotal</Text>
-              <Text>{formatMoney(invoice.subtotal, invoice.currency)}</Text>
-            </View>
-            {invoice.discount > 0 && (
-              <View style={styles.totalsRow}>
-                <Text>Discount</Text>
-                <Text>-{formatMoney(invoice.discount, invoice.currency)}</Text>
-              </View>
-            )}
-            <View style={styles.totalsRow}>
-              <Text>Taxable amount</Text>
-              <Text>{formatMoney(taxableAmount, invoice.currency)}</Text>
-            </View>
-            {invoice.gst_type === "cgst_sgst" && (
-              <>
-                <View style={styles.totalsRow}>
-                  <Text>CGST {(invoice.gst_percent / 2).toFixed(2)}%</Text>
-                  <Text>{formatMoney(invoice.cgst_amount, invoice.currency)}</Text>
-                </View>
-                <View style={styles.totalsRow}>
-                  <Text>SGST {(invoice.gst_percent / 2).toFixed(2)}%</Text>
-                  <Text>{formatMoney(invoice.sgst_amount, invoice.currency)}</Text>
-                </View>
-              </>
-            )}
-            {invoice.gst_type === "igst" && (
-              <View style={styles.totalsRow}>
-                <Text>IGST {invoice.gst_percent.toFixed(2)}%</Text>
-                <Text>{formatMoney(invoice.igst_amount, invoice.currency)}</Text>
-              </View>
-            )}
-            <View style={styles.grandTotalRow}>
-              <Text style={styles.grandTotalText}>Grand Total</Text>
-              <Text style={styles.grandTotalText}>{formatMoney(invoice.total, invoice.currency)}</Text>
-            </View>
-          </View>
-        </View>
+      h(
+        View,
+        { style: styles.totalsWrap },
+        h(
+          View,
+          { style: styles.totalsBox },
+          h(
+            View,
+            { style: styles.totalsRow },
+            h(Text, null, "Subtotal"),
+            h(Text, null, formatMoney(invoice.subtotal, invoice.currency))
+          ),
+          invoice.discount > 0 &&
+            h(
+              View,
+              { style: styles.totalsRow },
+              h(Text, null, "Discount"),
+              h(Text, null, `-${formatMoney(invoice.discount, invoice.currency)}`)
+            ),
+          h(
+            View,
+            { style: styles.totalsRow },
+            h(Text, null, "Taxable amount"),
+            h(Text, null, formatMoney(taxableAmount, invoice.currency))
+          ),
+          invoice.gst_type === "cgst_sgst" &&
+            h(
+              View,
+              null,
+              h(
+                View,
+                { style: styles.totalsRow },
+                h(Text, null, `CGST ${(invoice.gst_percent / 2).toFixed(2)}%`),
+                h(Text, null, formatMoney(invoice.cgst_amount, invoice.currency))
+              ),
+              h(
+                View,
+                { style: styles.totalsRow },
+                h(Text, null, `SGST ${(invoice.gst_percent / 2).toFixed(2)}%`),
+                h(Text, null, formatMoney(invoice.sgst_amount, invoice.currency))
+              )
+            ),
+          invoice.gst_type === "igst" &&
+            h(
+              View,
+              { style: styles.totalsRow },
+              h(Text, null, `IGST ${invoice.gst_percent.toFixed(2)}%`),
+              h(Text, null, formatMoney(invoice.igst_amount, invoice.currency))
+            ),
+          h(
+            View,
+            { style: styles.grandTotalRow },
+            h(Text, { style: styles.grandTotalText }, "Grand Total"),
+            h(Text, { style: styles.grandTotalText }, formatMoney(invoice.total, invoice.currency))
+          )
+        )
+      ),
 
-        {(COMPANY_INFO.bankAccountNumber || COMPANY_INFO.bankName) && (
-          <View style={styles.notesBlock}>
-            <Text style={styles.sectionLabel}>Payment information</Text>
-            {!!COMPANY_INFO.bankName && <Text>Bank: {COMPANY_INFO.bankName}</Text>}
-            {!!COMPANY_INFO.bankAccountName && <Text>Account name: {COMPANY_INFO.bankAccountName}</Text>}
-            {!!COMPANY_INFO.bankAccountNumber && <Text>Account number: {COMPANY_INFO.bankAccountNumber}</Text>}
-            {!!COMPANY_INFO.bankIfsc && <Text>IFSC: {COMPANY_INFO.bankIfsc}</Text>}
-          </View>
-        )}
+      !!(COMPANY_INFO.bankAccountNumber || COMPANY_INFO.bankName) &&
+        h(
+          View,
+          { style: styles.notesBlock },
+          h(Text, { style: styles.sectionLabel }, "Payment information"),
+          !!COMPANY_INFO.bankName && h(Text, null, `Bank: ${COMPANY_INFO.bankName}`),
+          !!COMPANY_INFO.bankAccountName && h(Text, null, `Account name: ${COMPANY_INFO.bankAccountName}`),
+          !!COMPANY_INFO.bankAccountNumber && h(Text, null, `Account number: ${COMPANY_INFO.bankAccountNumber}`),
+          !!COMPANY_INFO.bankIfsc && h(Text, null, `IFSC: ${COMPANY_INFO.bankIfsc}`)
+        ),
 
-        {!!invoice.notes && (
-          <View style={styles.notesBlock}>
-            <Text style={styles.sectionLabel}>Notes</Text>
-            <Text>{invoice.notes}</Text>
-          </View>
-        )}
+      !!invoice.notes &&
+        h(
+          View,
+          { style: styles.notesBlock },
+          h(Text, { style: styles.sectionLabel }, "Notes"),
+          h(Text, null, invoice.notes)
+        ),
 
-        {!!invoice.terms && (
-          <View style={styles.notesBlock}>
-            <Text style={styles.sectionLabel}>Terms</Text>
-            <Text>{invoice.terms}</Text>
-          </View>
-        )}
+      !!invoice.terms &&
+        h(
+          View,
+          { style: styles.notesBlock },
+          h(Text, { style: styles.sectionLabel }, "Terms"),
+          h(Text, null, invoice.terms)
+        ),
 
-        <Text style={styles.footer}>
-          {COMPANY_INFO.name} · {COMPANY_INFO.email}
-          {COMPANY_INFO.website ? ` · ${COMPANY_INFO.website}` : ""}
-        </Text>
-      </Page>
-    </Document>
+      h(
+        Text,
+        { style: styles.footer },
+        `${COMPANY_INFO.name} · ${COMPANY_INFO.email}${COMPANY_INFO.website ? ` · ${COMPANY_INFO.website}` : ""}`
+      )
+    )
   );
+}
+
+export function renderInvoicePdfBuffer(invoice: InvoicePdfData): Promise<Buffer> {
+  // react-pdf's types expect a ReactElement<DocumentProps>, but at runtime
+  // it accepts any element whose render tree resolves to a <Document> (the
+  // documented pattern of wrapping it in your own component). The cast
+  // below reflects that documented, correct usage — not a type error.
+  return renderToBuffer(h(InvoicePdfDocument, { invoice }) as unknown as React.ReactElement<React.ComponentProps<typeof Document>>);
 }

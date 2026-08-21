@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
-import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient, getUser } from "@/lib/supabase/server";
-import { InvoicePdfDocument, type InvoicePdfData } from "@/lib/invoices/invoice-pdf";
+import { renderInvoicePdfBuffer, type InvoicePdfData } from "@/lib/invoices/invoice-pdf";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (!UUID_RE.test(id)) return NextResponse.json({ error: "Invalid invoice id." }, { status: 400 });
+
   const user = await getUser();
   if (!user) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
@@ -73,12 +76,21 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     })),
   };
 
-  const buffer = await renderToBuffer(InvoicePdfDocument({ invoice: pdfData }));
+  let buffer: Buffer;
+  try {
+    buffer = await renderInvoicePdfBuffer(pdfData);
+  } catch (err) {
+    console.error("[invoice-pdf] render failed", { invoiceId: id, userId: user.id, error: err instanceof Error ? err.message : err });
+    return NextResponse.json({ error: "Couldn't generate the invoice PDF. Please try again." }, { status: 500 });
+  }
+
+  const url = new URL(_request.url);
+  const disposition = url.searchParams.get("download") === "0" ? "inline" : "attachment";
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="Invoice-${invoice.invoice_number}.pdf"`,
+      "Content-Disposition": `${disposition}; filename="Invoice-${invoice.invoice_number}.pdf"`,
       "Cache-Control": "private, no-store",
     },
   });
