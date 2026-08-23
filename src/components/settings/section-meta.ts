@@ -6,6 +6,7 @@ import {
   Lock,
   Globe,
   CalendarClock,
+  Plug,
   LifeBuoy,
   Info,
   AlertTriangle,
@@ -49,6 +50,12 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
     label: "Meeting Preferences",
     icon: CalendarClock,
     keywords: ["zoom", "google meet", "teams", "working hours", "reminder"],
+  },
+  {
+    id: "integrations",
+    label: "Integrations",
+    icon: Plug,
+    keywords: ["google calendar", "zoom", "microsoft teams", "connect", "oauth"],
   },
   {
     id: "help",

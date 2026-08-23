@@ -8,6 +8,7 @@ export type SettingsSectionId =
   | "privacy"
   | "language"
   | "meetings"
+  | "integrations"
   | "help"
   | "about"
   | "danger";

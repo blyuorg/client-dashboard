@@ -17,6 +17,7 @@ function classifyRoute(pathname: string) {
     pathname.startsWith("/billing") ||
     pathname.startsWith("/documents") ||
     pathname.startsWith("/messages") ||
+    pathname.startsWith("/meetings") ||
     pathname.startsWith("/notifications") ||
     pathname.startsWith("/profile") ||
     pathname.startsWith("/settings");

@@ -237,6 +237,54 @@ export type DirectMessage = {
   created_at: string;
 };
 
+export type OAuthProvider = "google" | "zoom" | "microsoft";
+export type MeetingProviderKind = "google_meet" | "zoom" | "microsoft_teams";
+export type ScheduledMeetingStatus = "scheduled" | "cancelled" | "completed";
+export type MeetingAttendeeStatus = "pending" | "accepted" | "declined";
+
+export type MeetingProviderConnection = {
+  id: string;
+  user_id: string;
+  provider: OAuthProvider;
+  access_token_encrypted: string;
+  refresh_token_encrypted: string | null;
+  expires_at: string | null;
+  scope: string | null;
+  provider_account_id: string | null;
+  provider_account_email: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ScheduledMeeting = {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  provider: MeetingProviderKind;
+  meeting_url: string | null;
+  provider_meeting_id: string | null;
+  google_calendar_event_id: string | null;
+  location: string | null;
+  start_time: string;
+  end_time: string;
+  timezone: string;
+  status: ScheduledMeetingStatus;
+  sync_error: string | null;
+  idempotency_key: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ScheduledMeetingAttendee = {
+  id: string;
+  meeting_id: string;
+  name: string | null;
+  email: string;
+  status: MeetingAttendeeStatus;
+  created_at: string;
+};
+
 export type Meeting = {
   id: string;
   project_id: string | null;
@@ -349,6 +397,24 @@ export type Database = {
         Row: DirectMessage;
         Insert: Partial<DirectMessage>;
         Update: Partial<DirectMessage>;
+        Relationships: [];
+      };
+      meeting_provider_connections: {
+        Row: MeetingProviderConnection;
+        Insert: Partial<MeetingProviderConnection>;
+        Update: Partial<MeetingProviderConnection>;
+        Relationships: [];
+      };
+      scheduled_meetings: {
+        Row: ScheduledMeeting;
+        Insert: Partial<ScheduledMeeting>;
+        Update: Partial<ScheduledMeeting>;
+        Relationships: [];
+      };
+      scheduled_meeting_attendees: {
+        Row: ScheduledMeetingAttendee;
+        Insert: Partial<ScheduledMeetingAttendee>;
+        Update: Partial<ScheduledMeetingAttendee>;
         Relationships: [];
       };
     };
