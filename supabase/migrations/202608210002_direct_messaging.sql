@@ -104,6 +104,7 @@ create trigger trg_touch_conversation_on_message
 alter table public.conversations enable row level security;
 alter table public.direct_messages enable row level security;
 
+drop policy if exists "conversations_select_participant" on public.conversations;
 create policy "conversations_select_participant" on public.conversations
   for select using (
     client_id = auth.uid() or assigned_admin_id = auth.uid() or public.is_admin()
@@ -112,12 +113,15 @@ create policy "conversations_select_participant" on public.conversations
 -- Conversations are provisioned server-side only (alongside the assignment
 -- change itself, using the admin's own authenticated session) — never
 -- directly by a client.
+drop policy if exists "conversations_admin_insert" on public.conversations;
 create policy "conversations_admin_insert" on public.conversations
   for insert with check (public.is_admin());
 
+drop policy if exists "conversations_admin_update" on public.conversations;
 create policy "conversations_admin_update" on public.conversations
   for update using (public.is_admin());
 
+drop policy if exists "direct_messages_select_participant" on public.direct_messages;
 create policy "direct_messages_select_participant" on public.direct_messages
   for select using (
     exists (
@@ -127,6 +131,7 @@ create policy "direct_messages_select_participant" on public.direct_messages
     )
   );
 
+drop policy if exists "direct_messages_insert_participant" on public.direct_messages;
 create policy "direct_messages_insert_participant" on public.direct_messages
   for insert with check (
     sender_id = auth.uid()
@@ -139,6 +144,7 @@ create policy "direct_messages_insert_participant" on public.direct_messages
 
 -- Only the *other* participant may mark a message read — a sender can
 -- never flip read_at on their own outgoing messages.
+drop policy if exists "direct_messages_update_read" on public.direct_messages;
 create policy "direct_messages_update_read" on public.direct_messages
   for update using (
     sender_id <> auth.uid()

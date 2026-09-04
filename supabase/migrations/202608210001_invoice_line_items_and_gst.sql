@@ -38,15 +38,19 @@ alter table public.invoice_line_items enable row level security;
 
 -- Visibility/write rules mirror the parent invoice: client can read line
 -- items for their own invoices, only admin can write.
+drop policy if exists "invoice_line_items_select" on public.invoice_line_items;
 create policy "invoice_line_items_select" on public.invoice_line_items
   for select using (
     public.is_admin() or
     exists (select 1 from public.invoices i where i.id = invoice_id and i.client_id = auth.uid())
   );
 
+drop policy if exists "invoice_line_items_admin_write" on public.invoice_line_items;
 create policy "invoice_line_items_admin_write" on public.invoice_line_items
   for insert with check (public.is_admin());
+drop policy if exists "invoice_line_items_admin_update" on public.invoice_line_items;
 create policy "invoice_line_items_admin_update" on public.invoice_line_items
   for update using (public.is_admin());
+drop policy if exists "invoice_line_items_admin_delete" on public.invoice_line_items;
 create policy "invoice_line_items_admin_delete" on public.invoice_line_items
   for delete using (public.is_admin());

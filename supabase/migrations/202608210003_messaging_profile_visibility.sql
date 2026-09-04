@@ -11,6 +11,7 @@
 -- Admins already see every profile via is_admin(), so no symmetric policy
 -- is needed for the other direction.
 
+drop policy if exists "profiles_select_assigned_conversation_partner" on public.profiles;
 create policy "profiles_select_assigned_conversation_partner" on public.profiles
   for select using (
     exists (

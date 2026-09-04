@@ -104,12 +104,15 @@ alter table public.meeting_provider_connections enable row level security;
 alter table public.scheduled_meetings enable row level security;
 alter table public.scheduled_meeting_attendees enable row level security;
 
+drop policy if exists "meeting_provider_connections_own" on public.meeting_provider_connections;
 create policy "meeting_provider_connections_own" on public.meeting_provider_connections
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 
+drop policy if exists "scheduled_meetings_own" on public.scheduled_meetings;
 create policy "scheduled_meetings_own" on public.scheduled_meetings
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 
+drop policy if exists "scheduled_meeting_attendees_own" on public.scheduled_meeting_attendees;
 create policy "scheduled_meeting_attendees_own" on public.scheduled_meeting_attendees
   for all using (
     exists (select 1 from public.scheduled_meetings m where m.id = meeting_id and m.user_id = auth.uid())
