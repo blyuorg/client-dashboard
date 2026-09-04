@@ -84,7 +84,7 @@ export function useConversationRealtime({
 
       // `private: true` (Realtime Authorization, RLS on realtime.messages)
       // is the correct long-term hardening here — see
-      // supabase/migrations/202608220001_realtime_channel_authorization.sql
+      // supabase/manual-sql/202608220001_realtime_channel_authorization.sql
       // for why and for the exact policies to apply once that table is
       // enrollable in this project. It's left off for now because this
       // project's Supabase role can't ALTER realtime.messages
