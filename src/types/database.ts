@@ -118,6 +118,7 @@ export type Invoice = {
   total: number;
   status: InvoiceStatus;
   pdf_storage_path: string | null;
+  razorpay_order_id: string | null;
   currency: string;
   notes: string | null;
   terms: string | null;

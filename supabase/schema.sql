@@ -190,6 +190,7 @@ create table public.invoices (
   total numeric(12,2) not null default 0,
   status invoice_status not null default 'draft',
   pdf_storage_path text,
+  razorpay_order_id text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

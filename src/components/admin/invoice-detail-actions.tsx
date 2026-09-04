@@ -31,7 +31,11 @@ export function InvoiceDetailActions({
       toast({ variant: "destructive", title: "Couldn't send invoice", description: result.error });
       return;
     }
-    toast({ title: "Invoice sent", description: "The client has been notified in their portal." });
+    if (result.warning) {
+      toast({ variant: "destructive", title: "Invoice sent with a warning", description: result.warning });
+    } else {
+      toast({ title: "Invoice sent", description: "The client has been notified in their portal." });
+    }
     router.refresh();
   }
 

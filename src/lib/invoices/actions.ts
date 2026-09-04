@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getReadableErrorMessage } from "@/lib/supabase/errors";
 import { calculateInvoiceTotals, calculateLineItem, formatMoney } from "@/lib/invoices/calculations";
+import { createRazorpayOrder } from "@/lib/razorpay";
 import type { GstType, InvoiceStatus } from "@/types/database";
 
 async function requireAdmin() {
@@ -68,7 +69,7 @@ export async function saveInvoiceWithLineItems(
   invoiceId: string | null,
   header: InvoiceHeaderInput,
   lineItems: InvoiceLineItemInput[]
-): Promise<{ error: string | null; invoiceId?: string }> {
+): Promise<{ error: string | null; invoiceId?: string; warning?: string }> {
   const { supabase, error: authError } = await requireAdmin();
   if (authError) return { error: authError };
 
@@ -154,12 +155,35 @@ export async function saveInvoiceWithLineItems(
   const { error: insertItemsError } = await supabase.from("invoice_line_items").insert(lineItemRows);
   if (insertItemsError) return { error: getReadableErrorMessage(insertItemsError) };
 
+  // Draft invoices are still being drafted — amounts and even the project
+  // can change, so there's nothing durable yet for Razorpay to accept. Once
+  // an invoice leaves draft, confirm up front that Razorpay can take payment
+  // for it, and keep the stored order in sync with the current total so the
+  // pay flow (see /api/payments/razorpay/order) can reuse a single order per
+  // invoice instead of minting a new one on every checkout attempt.
+  let warning: string | undefined;
+  if (header.status !== "draft" && totals.grandTotal > 0) {
+    try {
+      const order = await createRazorpayOrder({
+        id: resolvedInvoiceId,
+        invoice_number: invoicePayload.invoice_number,
+        total: totals.grandTotal,
+        currency: invoicePayload.currency,
+      });
+      await supabase.from("invoices").update({ razorpay_order_id: order.id }).eq("id", resolvedInvoiceId);
+    } catch (razorpayError) {
+      warning = `Invoice saved, but Razorpay could not be set up for it: ${
+        razorpayError instanceof Error ? razorpayError.message : "Unknown error."
+      }`;
+    }
+  }
+
   revalidatePath("/admin/invoices");
   revalidatePath(`/admin/invoices/${resolvedInvoiceId}`);
   revalidatePath("/billing");
   revalidatePath("/dashboard");
 
-  return { error: null, invoiceId: resolvedInvoiceId };
+  return { error: null, invoiceId: resolvedInvoiceId, warning };
 }
 
 export async function deleteInvoice(invoiceId: string): Promise<{ error: string | null }> {
@@ -185,13 +209,13 @@ export async function deleteInvoice(invoiceId: string): Promise<{ error: string 
  * about this flow. If any step fails, the function returns an error and
  * does NOT report success.
  */
-export async function sendInvoice(invoiceId: string): Promise<{ error: string | null }> {
+export async function sendInvoice(invoiceId: string): Promise<{ error: string | null; warning?: string }> {
   const { supabase, userId, error: authError } = await requireAdmin();
   if (authError) return { error: authError };
 
   const { data: invoice, error: fetchError } = await supabase
     .from("invoices")
-    .select("id, client_id, project_id, invoice_number, total, status, currency")
+    .select("id, client_id, project_id, invoice_number, total, status, currency, razorpay_order_id")
     .eq("id", invoiceId)
     .single();
   if (fetchError || !invoice) return { error: "Invoice not found." };
@@ -213,6 +237,26 @@ export async function sendInvoice(invoiceId: string): Promise<{ error: string | 
     .update({ status: nextStatus, sent_at: sentAt })
     .eq("id", invoiceId);
   if (updateError) return { error: getReadableErrorMessage(updateError) };
+
+  // A draft can be sent without ever going through saveInvoiceWithLineItems
+  // again — this is the other place an invoice leaves draft, so provision
+  // the Razorpay order here too if it doesn't have one yet.
+  let warning: string | undefined;
+  if (!invoice.razorpay_order_id && Number(invoice.total) > 0) {
+    try {
+      const order = await createRazorpayOrder({
+        id: invoice.id,
+        invoice_number: invoice.invoice_number,
+        total: invoice.total,
+        currency: invoice.currency,
+      });
+      await supabase.from("invoices").update({ razorpay_order_id: order.id }).eq("id", invoice.id);
+    } catch (razorpayError) {
+      warning = `Invoice sent, but Razorpay could not be set up for it: ${
+        razorpayError instanceof Error ? razorpayError.message : "Unknown error."
+      }`;
+    }
+  }
 
   const { error: notifyError } = await supabase.from("notifications").insert({
     user_id: invoice.client_id,
@@ -241,5 +285,5 @@ export async function sendInvoice(invoiceId: string): Promise<{ error: string | 
   revalidatePath("/dashboard");
   revalidatePath("/notifications");
 
-  return { error: null };
+  return { error: null, warning };
 }

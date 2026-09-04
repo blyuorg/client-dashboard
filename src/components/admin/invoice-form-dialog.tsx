@@ -131,7 +131,11 @@ export function InvoiceFormDialog({
     );
     setSaving(false);
     if (result.error) return toast({ variant: "destructive", title: "Couldn't save invoice", description: result.error });
-    toast({ title: invoice ? "Invoice updated" : "Invoice created" });
+    if (result.warning) {
+      toast({ variant: "destructive", title: "Invoice saved with a warning", description: result.warning });
+    } else {
+      toast({ title: invoice ? "Invoice updated" : "Invoice created" });
+    }
     onOpenChange(false);
   }
 
