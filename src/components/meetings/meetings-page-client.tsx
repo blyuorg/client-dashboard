@@ -104,6 +104,7 @@ export function MeetingsPageClient({
       )}
 
       <ScheduleMeetingDialog
+        key={editingMeeting?.id ?? (scheduleOpen ? "new-open" : "new-closed")}
         open={scheduleOpen || Boolean(editingMeeting)}
         onOpenChange={(open) => {
           if (!open) {

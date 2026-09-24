@@ -87,6 +87,18 @@ supabase/
   schema.sql        — full DB schema + RLS policies
 ```
 
-## Next steps
+## Documents, messages, and meetings
 
-Continue building step by step — task management, milestones, billing UI, document upload to Supabase Storage, realtime messaging, and the admin CRUD panels are all scaffolded but not yet built out.
+The Documents page uploads admin-selected files directly to the private Supabase Storage `documents` bucket. Apply `supabase/migrations/20260924232129_document_storage_bucket.sql` to another Supabase project before using uploads there. Files are limited to 20 MB and PDF, Word, Excel, text, CSV, PNG, JPEG, or WebP. The selected project's client can download the file through a short-lived signed URL. The migration has already been applied to the `client-dashboard` Supabase project.
+
+Messages use the `conversations` and `direct_messages` tables and Supabase Realtime. A client must have an assigned admin in `profiles.assigned_admin_id`; the admin assignment creates or heals the private conversation. The live project has existing messages and the message insert policy was checked in a rolled-back transaction.
+
+Meetings use Google Calendar to send invitations for all three video platforms. Set `TOKEN_ENCRYPTION_KEY` to a long random value in every deployment environment and keep the same value when redeploying, since changing it invalidates stored OAuth tokens. The local `.env.local` has a generated key. Configure these OAuth apps and add their client IDs, client secrets, and callback URLs to `.env.local` and the deployment environment:
+
+| Provider | Required environment variables | Callback URL suffix | API permission |
+| --- | --- | --- | --- |
+| Google Calendar / Meet | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | `/api/integrations/google/callback` | Calendar API, `calendar.events` |
+| Zoom | `ZOOM_CLIENT_ID`, `ZOOM_CLIENT_SECRET`, `ZOOM_REDIRECT_URI` | `/api/integrations/zoom/callback` | Create/update/delete meetings (`meeting:write:meeting`; add read scope if required by the Zoom app type) |
+| Microsoft Teams | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_REDIRECT_URI`, optionally `MICROSOFT_TENANT_ID` | `/api/integrations/microsoft/callback` | Delegated `OnlineMeetings.ReadWrite` and `User.Read`; use a work or school Teams account |
+
+The redirect URI must match the exact app URL, including `http://localhost:8000` for local development or the production domain. After adding the credentials, sign in to the dashboard and connect Google, Zoom, and Microsoft under **Settings → Integrations**. Each person scheduling meetings connects their own provider accounts. Google must be connected even when choosing Zoom or Teams because this implementation sends every invitation through Google Calendar.

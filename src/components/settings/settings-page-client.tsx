@@ -146,7 +146,12 @@ function IntegrationRedirectToast() {
     if (connected) {
       showToast(`${PROVIDER_LABEL[connected] ?? connected} connected`);
     } else if (errorProvider) {
-      showToast(`Couldn't connect ${PROVIDER_LABEL[errorProvider] ?? errorProvider}`, "Please try again.");
+      showToast(
+        `Couldn't connect ${PROVIDER_LABEL[errorProvider] ?? errorProvider}`,
+        searchParams.get("reason") === "not_configured"
+          ? "The OAuth app credentials still need to be configured."
+          : "Please try again."
+      );
     }
 
     router.replace("/settings#integrations");

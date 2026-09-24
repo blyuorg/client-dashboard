@@ -65,6 +65,13 @@ export function ScheduleMeetingDialog({
     editingMeeting?.attendees.map((a) => ({ name: a.name ?? "", email: a.email })) ?? []
   );
   const [provider, setProvider] = useState<MeetingProviderKind>(editingMeeting?.provider ?? "google_meet");
+  const missingConnection = !connectedProviders.has("google")
+    ? "Connect Google Calendar before scheduling a meeting."
+    : provider === "zoom" && !connectedProviders.has("zoom")
+      ? "Connect Zoom before scheduling a Zoom meeting."
+      : provider === "microsoft_teams" && !connectedProviders.has("microsoft")
+        ? "Connect Microsoft Teams before scheduling a Teams meeting."
+        : null;
   const [zoomOptions, setZoomOptions] = useState<ZoomOptions>(DEFAULT_ZOOM_OPTIONS);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [submitting, setSubmitting] = useState(false);
@@ -86,6 +93,10 @@ export function ScheduleMeetingDialog({
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
+    if (missingConnection) {
+      setError(missingConnection);
+      return;
+    }
 
     if (!title.trim() || !date || !startTime || !endTime) {
       setError("Fill in the meeting title, date, and time.");
@@ -201,6 +212,12 @@ export function ScheduleMeetingDialog({
             />
           </div>
 
+          {missingConnection && (
+            <p className="text-sm text-muted-foreground">
+              {missingConnection} <a href="/settings#integrations" className="text-primary underline">Open integrations</a>
+            </p>
+          )}
+
           {error && (
             <p role="alert" className="text-sm text-destructive">
               {error}
@@ -211,7 +228,7 @@ export function ScheduleMeetingDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting || Boolean(missingConnection)}>
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditing ? "Save changes" : "Schedule meeting"}
             </Button>

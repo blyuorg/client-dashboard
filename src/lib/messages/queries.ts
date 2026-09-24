@@ -39,15 +39,20 @@ export async function getOrHealClientConversation(userId: string, assignedAdminI
 
   if (existing && existing.assigned_admin_id === assignedAdminId) return existing;
 
-  const admin = createAdminClient();
-  const { data: healed, error } = await admin
-    .from("conversations")
-    .upsert({ client_id: userId, assigned_admin_id: assignedAdminId }, { onConflict: "client_id" })
-    .select("id, client_id, assigned_admin_id, created_at, updated_at")
-    .single();
+  try {
+    const admin = createAdminClient();
+    const { data: healed, error } = await admin
+      .from("conversations")
+      .upsert({ client_id: userId, assigned_admin_id: assignedAdminId }, { onConflict: "client_id" })
+      .select("id, client_id, assigned_admin_id, created_at, updated_at")
+      .single();
 
-  if (error || !healed) return existing ?? null;
-  return healed;
+    if (error || !healed) return existing ?? null;
+    return healed;
+  } catch (error) {
+    console.error("[messages] Could not repair client conversation", error instanceof Error ? error.message : error);
+    return existing ?? null;
+  }
 }
 
 export async function getConversationParticipants(clientId: string, assignedAdminId: string) {

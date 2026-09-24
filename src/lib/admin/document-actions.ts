@@ -6,6 +6,14 @@ import { createClient } from "@/lib/supabase/server";
 import { getReadableErrorMessage } from "@/lib/supabase/errors";
 
 type ActionResult = { error: string | null };
+const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024;
+const ALLOWED_MIME_TYPES = new Set([
+  "application/pdf", "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/plain", "text/csv", "image/png", "image/jpeg", "image/webp",
+]);
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -28,13 +36,23 @@ function revalidateDocuments() {
 
 export async function getDocumentUploadUrl(
   projectId: string,
-  fileName: string
+  fileName: string,
+  fileSize: number,
+  mimeType: string
 ): Promise<{ path: string | null; token: string | null; error: string | null }> {
   const { supabase, error } = await requireAdmin();
   if (error) return { path: null, token: null, error };
   if (!projectId || !fileName) return { path: null, token: null, error: "Choose a project and file to upload." };
+  if (!Number.isSafeInteger(fileSize) || fileSize < 1 || fileSize > MAX_DOCUMENT_BYTES) {
+    return { path: null, token: null, error: "Choose a file smaller than 20 MB." };
+  }
+  if (!ALLOWED_MIME_TYPES.has(mimeType)) {
+    return { path: null, token: null, error: "This file type is not supported." };
+  }
+  const { data: project } = await supabase.from("projects").select("id").eq("id", projectId).maybeSingle();
+  if (!project) return { path: null, token: null, error: "Project not found." };
 
-  const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "-");
+  const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "-").slice(0, 120) || "document";
   const path = `${projectId}/${randomUUID()}-${safeName}`;
   const { data, error: uploadError } = await supabase.storage.from("documents").createSignedUploadUrl(path);
   if (uploadError || !data) return { path: null, token: null, error: getReadableErrorMessage(uploadError) };
@@ -51,6 +69,10 @@ export async function createDocumentRecord(input: {
 }): Promise<ActionResult> {
   const { supabase, user, error } = await requireAdmin();
   if (error || !user) return { error };
+  if (!input.storagePath.startsWith(`${input.projectId}/`) || !ALLOWED_MIME_TYPES.has(input.mimeType ?? "") ||
+      !Number.isSafeInteger(input.fileSize) || input.fileSize < 1 || input.fileSize > MAX_DOCUMENT_BYTES) {
+    return { error: "Invalid document upload." };
+  }
 
   const { error: insertError } = await supabase.from("documents").insert({
     project_id: input.projectId,
@@ -61,7 +83,10 @@ export async function createDocumentRecord(input: {
     file_size: input.fileSize,
     mime_type: input.mimeType,
   });
-  if (insertError) return { error: getReadableErrorMessage(insertError) };
+  if (insertError) {
+    await supabase.storage.from("documents").remove([input.storagePath]);
+    return { error: getReadableErrorMessage(insertError) };
+  }
 
   revalidateDocuments();
   return { error: null };
